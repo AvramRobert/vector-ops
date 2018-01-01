@@ -7,7 +7,7 @@
   ([a b c] (hamt.RT/concat a b c))
   ([a b c d] (hamt.RT/concat a b c d))
   ([a b c d e] (hamt.RT/concat a b c d e))
-  ([a b c d e & rest] (hamt.RT/concatMany (cons a (cons b (cons c (cond d (cons e rest))))))))
+  ([a b c d e & rest] (hamt.RT/concatMany (cons a (cons b (cons c (cons d (cons e rest))))))))
 
 (defn mapv [f v])
 (defn flattenv [v])
