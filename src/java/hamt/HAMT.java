@@ -126,7 +126,14 @@ class HAMT {
     public HAMT concat(PersistentVector that) {
         if (tail.length == 32) {
             pushNodes(that);
-        } else {
+        }
+        else if (size == 0) {
+            this.size = that.count();
+            this.shift = that.shift;
+            this.tree = that.root;
+            this.tail = that.tail;
+        }
+        else {
             int leftSize = tail.length;
             int rightSize;
             Object[] node;

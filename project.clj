@@ -6,4 +6,5 @@
   :java-source-paths ["src/java"]
   :main vector-ops.core
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [criterium "0.4.4"]])
+                 [criterium "0.4.4"]
+                 [org.clojure/test.check "0.9.0"]])
