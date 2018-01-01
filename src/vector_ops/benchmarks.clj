@@ -1,8 +1,9 @@
 (ns vector-ops.benchmarks
   (use criterium.core)
-  (import (hamt RT)))
+  (require [vector-ops.core :as c]))
 
 (def data (vec (range 0 1000000)))
+(def spread-data (mapv (constantly data) (range 0 10)))
 
 (defmacro measure [expr]
   `(with-progress-reporting (bench ~expr :verbose)))
@@ -11,7 +12,10 @@
   (measure (into data data)))
 
 (defn bench-concat-opt []
-  (measure (RT/concat data data)))
+  (measure (c/concatv data data)))
+
+(defn bench-concat-spread-opt []
+  (measure (apply c/concatv spread-data)))
 
 (defn -main [& args]
-  (bench-concat-clj))
+  (bench-concat-spread-opt))

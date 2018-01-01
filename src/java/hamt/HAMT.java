@@ -4,6 +4,8 @@ import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentVector;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+
 import static clojure.lang.PersistentVector.*;
 
 class HAMT {
@@ -13,7 +15,7 @@ class HAMT {
     private Node tree;
     private Object[] tail;
 
-    HAMT(IPersistentMap meta, int size, int shift, Node tree, Object[] tail) {
+    public HAMT(IPersistentMap meta, int size, int shift, Node tree, Object[] tail) {
         this.meta = meta;
         this.size = size;
         this.shift = shift;
@@ -67,7 +69,7 @@ class HAMT {
         else {
             Node subtree = (Node) tree.array[i];
             if (subtree == null) {
-                tree.array[i] = path(new Node(tree.edit, that), shift);
+                tree.array[i] = path(new Node(tree.edit, that), shift - 5);
             } else {
                 push((Node)tree.array[i], that, shift - 5);
             }
@@ -107,7 +109,7 @@ class HAMT {
     }
 
     private int tailSize() {
-        return ((size - 1) & 32) + 1;
+        return ((this.size - 1) % 32) + 1;
     }
 
     private boolean canContain(Object[] node) {
@@ -115,9 +117,9 @@ class HAMT {
     }
 
     private void trimTail() {
-        int tailSize = tailSize();
-        Object[] newTail = new Object[tailSize];
-        System.arraycopy(tail, 0, newTail, 0, tailSize);
+        int sz = tailSize();
+        Object[] newTail = new Object[sz];
+        System.arraycopy(tail, 0, newTail, 0, sz);
         this.tail = newTail;
     }
 
@@ -132,7 +134,7 @@ class HAMT {
             for (int i = 0; i < that.count(); i+=32) {
                 node = that.arrayFor(i);
                 if (isLastIn(that, i) && canContain(node)) {
-                    System.arraycopy(node, 0, tail, 0, node.length);
+                    System.arraycopy(node, 0, tail, leftSize, node.length);
                     this.size += node.length;
                 } else {
                     Object[] newTail = new Object[32];
@@ -147,5 +149,10 @@ class HAMT {
             trimTail();
         }
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Tail: %s", Arrays.deepToString(tail));
     }
 }
