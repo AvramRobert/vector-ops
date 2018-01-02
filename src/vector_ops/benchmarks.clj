@@ -17,5 +17,11 @@
 (defn bench-concat-spread-opt []
   (measure (apply c/concatv spread-data)))
 
+(defn bench-mapv-clj []
+  (measure (mapv inc data)))
+
+(defn bench-mapv-opt []
+  (measure (c/mapv inc data)))
+
 (defn -main [& args]
-  (bench-concat-opt))
+  (bench-mapv-opt))

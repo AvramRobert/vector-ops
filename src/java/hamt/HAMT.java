@@ -1,9 +1,11 @@
 package hamt;
 
+import clojure.lang.IFn;
 import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentVector;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -26,6 +28,10 @@ class HAMT {
 
     public static HAMT fromVector(PersistentVector vec) {
         return new HAMT(vec.meta(), vec.count(), vec.shift, vec.root, vec.tail);
+    }
+
+    private HAMT emptyFrom(PersistentVector vec) {
+        return new HAMT(vec.meta(), 0, 5, nodeFrom(vec.root), new Object[]{});
     }
 
     public PersistentVector persistentVector() {
@@ -53,6 +59,10 @@ class HAMT {
         return new Node(that.edit, new Object[32]);
     }
 
+    private Node cloneNode(Node that) {
+        return new Node(that.edit, that.array.clone());
+    }
+
     private Node path (Node that, int shift) {
         if (shift == 0) return that;
         else {
@@ -60,10 +70,6 @@ class HAMT {
             node.array[0] = path(that, shift - 5);
             return node;
         }
-    }
-
-    private Node cloneNode(Node that) {
-        return new Node(that.edit, that.array.clone());
     }
 
     private Node push (Node tree, Object[] that, int shift) {
@@ -163,5 +169,56 @@ class HAMT {
             trimTail();
         }
         return this;
+    }
+
+    private void pushMut (Node tree, Object[] node, int shift) {
+        int idx = ((this.size - 1) >>> shift) & 0x01f;
+        if (shift == 5) {
+            tree.array[idx] = new Node(tree.edit, node);
+        }
+        else {
+            Node subtree = (Node) tree.array[idx];
+            if (subtree == null) {
+                tree.array[idx] = path(new Node(tree.edit, node), shift - 5);
+            }
+            else pushMut(subtree, node, shift - 5);
+        }
+    }
+
+    private void pushNodeMut (Object[] node) {
+        if (size >>> 5 > 1 << shift) {
+            Node newTree = nodeFrom(tree);
+            newTree.array[0] = tree;
+            newTree.array[1] = path(new Node (tree.edit, tail), shift);
+            this.tree = newTree;
+            this.shift += 5;
+        } else {
+            pushMut(tree, tail, shift);
+        }
+        this.tail = node;
+        this.size += node.length;
+    }
+
+    private void mapArray(Object[] arr, IFn f) {
+        int length = arr.length;
+        for (int i = 0; i < length && arr[i] != null; i++) {
+            arr[i] = f.invoke(arr[i]);
+        }
+    }
+
+    public HAMT map (PersistentVector vec, IFn f) {
+        HAMT newVec = emptyFrom(vec);
+        int count = vec.count();
+        for (int i = 0; i < count; i += 32) {
+            Object[] node = vec.arrayFor(i).clone();
+            mapArray(node, f);
+            if (newVec.size == 0) {
+                newVec.tail = node;
+                newVec.size += node.length;
+            } else {
+                newVec.pushNodeMut(node);
+            }
+        }
+        return newVec;
     }
 }

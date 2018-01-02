@@ -20,4 +20,12 @@ public class Util {
         final Object[] tree = insideOut(vec.root, vec.shift);
         return String.format("Tail: %s :: Tree: %s", Arrays.deepToString(vec.tail), Arrays.deepToString(tree));
     }
+
+    public static String asString(HAMT vec) {
+        return asString(vec.persistentVector());
+    }
+
+    public static void printArray(Object[] arr) {
+        System.out.println(Arrays.deepToString(arr));
+    }
 }

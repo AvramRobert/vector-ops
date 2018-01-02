@@ -1,5 +1,6 @@
 package hamt;
 
+import clojure.lang.IFn;
 import clojure.lang.ISeq;
 import clojure.lang.PersistentVector;
 
@@ -40,5 +41,10 @@ public class RT {
             vectors = vectors.next();
         }
         return vector.persistentVector();
+    }
+
+
+    public static PersistentVector map (PersistentVector that, IFn f) {
+        return HAMT.fromVector(that).map(that, f).persistentVector();
     }
 }

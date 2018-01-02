@@ -9,9 +9,10 @@
   ([a b c d e] (hamt.RT/concat a b c d e))
   ([a b c d e & rest] (hamt.RT/concatMany (cons a (cons b (cons c (cons d (cons e rest))))))))
 
-(defn mapv [f v])
-(defn flattenv [v])
+(defn mapv [f v] (hamt.RT/map v f))
+
 (defn splitv-at [at v])
+(defn flattenv [v])
 (defn takev [n v])
 (defn dropv [n v])
 (defn takev-last [n v])
