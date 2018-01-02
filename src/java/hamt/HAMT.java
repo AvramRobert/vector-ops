@@ -5,6 +5,7 @@ import clojure.lang.PersistentVector;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static clojure.lang.PersistentVector.*;
 
@@ -61,19 +62,25 @@ class HAMT {
         }
     }
 
-    private void push (Node tree, Object[] that, int shift) {
+    private Node cloneNode(Node that) {
+        return new Node(that.edit, that.array.clone());
+    }
+
+    private Node push (Node tree, Object[] that, int shift) {
         int i = ((size - 1) >>> shift) & 0x01f;
+        Node newTree = cloneNode(tree);
         if (shift == 5) {
-            tree.array[i] = new Node(tree.edit, that);
+            newTree.array[i] = new Node(tree.edit, that);
         }
         else {
             Node subtree = (Node) tree.array[i];
             if (subtree == null) {
-                tree.array[i] = path(new Node(tree.edit, that), shift - 5);
+                newTree.array[i] = path(new Node(tree.edit, that), shift - 5);
             } else {
-                push((Node)tree.array[i], that, shift - 5);
+                push((Node)newTree.array[i], that, shift - 5);
             }
         }
+        return newTree;
     }
 
     private void pushNode (Object[] node, int nodeSize) {
@@ -84,7 +91,7 @@ class HAMT {
             this.tree = newRoot;
             this.shift = shift + 5;
         } else {
-            push(tree, tail, shift);
+            this.tree = push(tree, tail, shift);
         }
         this.tail = node;
         this.size += nodeSize;
@@ -156,10 +163,5 @@ class HAMT {
             trimTail();
         }
         return this;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Tail: %s", Arrays.deepToString(tail));
     }
 }

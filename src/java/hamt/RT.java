@@ -3,6 +3,8 @@ package hamt;
 import clojure.lang.ISeq;
 import clojure.lang.PersistentVector;
 
+import java.util.Arrays;
+
 public class RT {
     public static PersistentVector concat (PersistentVector a,
                                            PersistentVector b) {

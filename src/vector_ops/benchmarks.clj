@@ -18,4 +18,4 @@
   (measure (apply c/concatv spread-data)))
 
 (defn -main [& args]
-  (bench-concat-spread-opt))
+  (bench-concat-opt))
