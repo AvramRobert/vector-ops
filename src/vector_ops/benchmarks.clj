@@ -23,5 +23,11 @@
 (defn bench-mapv-opt []
   (measure (c/mapv inc data)))
 
+(defn bench-take-clj []
+  (measure (vec (take 425166 data))))
+
+(defn bench-take-opt []
+  (measure (c/takev 425166 data)))
+
 (defn -main [& args]
-  (bench-mapv-opt))
+  (bench-take-opt))

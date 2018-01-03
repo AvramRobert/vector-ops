@@ -199,6 +199,19 @@ class HAMT {
         this.size += node.length;
     }
 
+    private void pushNodesMut(PersistentVector vec, int amount) {
+        Object[] node;
+        for (int i = 0; i < amount; i++) {
+            node = vec.arrayFor(i*32);
+            if (size == 0) {
+                this.tail = node;
+                this.size += node.length;
+            } else {
+                pushNodeMut(node);
+            }
+        }
+    }
+
     private void mapArray(Object[] arr, IFn f) {
         int length = arr.length;
         for (int i = 0; i < length && arr[i] != null; i++) {
@@ -218,6 +231,31 @@ class HAMT {
             } else {
                 newVec.pushNodeMut(node);
             }
+        }
+        return newVec;
+    }
+
+    public HAMT take (PersistentVector vec, int n) {
+        HAMT newVec = emptyFrom(vec);
+        if (n <= 0) return newVec;
+        else if (n > size) return fromVector(vec);
+        else if (n < 32) {
+            Object[] newTail = new Object[n];
+            System.arraycopy(vec.arrayFor(0), 0, newTail, 0, n);
+            newVec.tail = newTail;
+            newVec.size += n;
+        }
+        else if ((n & 0x01f) == 0) {
+            int nodes = n / 32;
+            newVec.pushNodesMut(vec, nodes);
+        }
+        else {
+            int totalNodes = n / 32;
+            int partial = n % 32;
+            Object[] newTail = new Object[partial];
+            newVec.pushNodesMut(vec, totalNodes);
+            System.arraycopy(vec.arrayFor(totalNodes*32), 0, newTail, 0, partial);
+            newVec.pushNodeMut(newTail);
         }
         return newVec;
     }

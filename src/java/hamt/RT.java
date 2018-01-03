@@ -47,4 +47,8 @@ public class RT {
     public static PersistentVector map (PersistentVector that, IFn f) {
         return HAMT.fromVector(that).map(that, f).persistentVector();
     }
+
+    public static PersistentVector take(PersistentVector that, int n) {
+        return HAMT.fromVector(that).take(that, n).persistentVector();
+    }
 }
