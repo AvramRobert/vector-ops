@@ -5,11 +5,8 @@ import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentVector;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static clojure.lang.PersistentVector.*;
+import static hamt.Util.*;
 
 class HAMT {
     private final IPersistentMap meta;
@@ -199,9 +196,9 @@ class HAMT {
         this.size += node.length;
     }
 
-    private void pushNodesMut(PersistentVector vec, int amount) {
+    private void pushNodesMut(PersistentVector vec, int from, int to) {
         Object[] node;
-        for (int i = 0; i < amount; i++) {
+        for (int i = from; i < to; i++) {
             node = vec.arrayFor(i*32);
             if (size == 0) {
                 this.tail = node;
@@ -246,16 +243,63 @@ class HAMT {
             newVec.size += n;
         }
         else if ((n & 0x01f) == 0) {
-            int nodes = n / 32;
-            newVec.pushNodesMut(vec, nodes);
+            int totalNodes = n / 32;
+            newVec.pushNodesMut(vec, 0, totalNodes);
         }
         else {
             int totalNodes = n / 32;
-            int partial = n % 32;
+            int partial = n & 0x01f; // n % 32
             Object[] newTail = new Object[partial];
-            newVec.pushNodesMut(vec, totalNodes);
+            newVec.pushNodesMut(vec, 0, totalNodes);
             System.arraycopy(vec.arrayFor(totalNodes*32), 0, newTail, 0, partial);
             newVec.pushNodeMut(newTail);
+        }
+        return newVec;
+    }
+
+    // For dropping, I think I may need to use the same strategy that I used for concatenating
+    // Just copy in batches of leftSize and rightSize
+    public HAMT drop (PersistentVector vec, int n) {
+        HAMT newVec = emptyFrom(vec);
+        if (n <= 0) return fromVector(vec);
+        else if (n >= size) return newVec;
+        else if (n < 32) {
+            Object[] node = vec.arrayFor(0);
+            int amount = node.length - n;
+            Object[] newTail = new Object[amount];
+            System.arraycopy(node, n, newTail, 0, amount);
+            newVec.tail = newTail;
+            newVec.size += amount;
+        }
+        else if ((n & 0x01f) == 0) {
+            int toRemove = n / 32;
+            int nodeSize = ((vec.count() - 1) >> 5) + 1;
+            newVec.pushNodesMut(vec, toRemove, nodeSize);
+        }
+        else {
+            int leftSize = n & 0x01f; // n % 32
+            int i = (n / 32) * 32;
+            int rightSize;
+            Object[] node = vec.arrayFor(i);
+            newVec.tail = new Object[32];
+            while (i < vec.count()) {
+                if (node.length < 32) rightSize = node.length - leftSize;
+                else rightSize = 32 - leftSize;
+                System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
+                newVec.size += rightSize;
+                if (i+32 < vec.count()) {
+                    node = vec.arrayFor(i + 32);
+                    if (node.length < leftSize) leftSize = node.length;
+                    System.arraycopy(node, 0, newVec.tail, rightSize, leftSize);
+                    newVec.size += leftSize;
+                    if (!isLastIn(vec, i + 32)) {
+                        newVec.pushNodeMut(new Object[32]);
+                        newVec.size -= 32;
+                     }
+                }
+                i += 32;
+            }
+            newVec.trimTail();
         }
         return newVec;
     }

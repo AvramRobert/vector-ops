@@ -12,9 +12,9 @@
 (defn mapv [f v] (hamt.RT/map v f))
 
 (defn takev [n v] (hamt.RT/take v n))
+(defn dropv [n v] (hamt.RT/drop v n))
 (defn splitv-at [at v])
 (defn flattenv [v])
-(defn dropv [n v])
 (defn takev-last [n v])
 (defn dropv-last [n v])
 (defn takev-while [pred v])

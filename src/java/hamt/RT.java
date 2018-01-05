@@ -51,4 +51,8 @@ public class RT {
     public static PersistentVector take(PersistentVector that, int n) {
         return HAMT.fromVector(that).take(that, n).persistentVector();
     }
+
+    public static PersistentVector drop(PersistentVector that, int n) {
+        return HAMT.fromVector(that).drop(that, n).persistentVector();
+    }
 }

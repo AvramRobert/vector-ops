@@ -26,7 +26,9 @@ public class Util {
         return asString(vec.persistentVector());
     }
 
+    public static void println (Object that) { System.out.println (that.toString()); }
+
     public static void printArray(Object[] arr) {
-        System.out.println(Arrays.deepToString(arr));
+        println(Arrays.deepToString(arr));
     }
 }
