@@ -17,8 +17,10 @@
 
 (defn splitv-at [at v] [(takev at v) (dropv at v)])
 
-(defn takev-last [n v] (hamt.RT/takeLast v n))
-(defn dropv-last [n v] (hamt.RT/dropLast v n))
+(defn takev-last [n v] (dropv (- (count v) n) v))
+
+(defn dropv-last [n v] (takev (- (count v) n) v))
+
 (defn takev-while [pred v] (hamt.RT/takeWhile v pred))
 (defn dropv-while [pred v] (hamt.RT/dropWhile v pred))
 

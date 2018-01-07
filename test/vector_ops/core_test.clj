@@ -32,3 +32,13 @@
          (for-all [v (gen/vector gen/int)]
                   (let [i (rand-int (count v))]
                     (is (= (clojure.core/mapv vec (split-at i v)) (splitv-at i v))))))
+
+(defspec taking-last
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))]
+                    (is (= (vec (take-last i v)) (takev-last i v))))))
+
+(defspec dropping-last
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))]
+                    (is (= (vec (drop-last i v)) (dropv-last i v))))))
