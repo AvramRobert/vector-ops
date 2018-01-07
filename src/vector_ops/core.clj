@@ -17,9 +17,9 @@
 
 (defn splitv-at [at v] [(takev at v) (dropv at v)])
 
-(defn takev-last [n v])
-(defn dropv-last [n v])
-(defn takev-while [pred v])
-(defn dropv-while [pred v])
+(defn takev-last [n v] (hamt.RT/takeLast v n))
+(defn dropv-last [n v] (hamt.RT/dropLast v n))
+(defn takev-while [pred v] (hamt.RT/takeWhile v pred))
+(defn dropv-while [pred v] (hamt.RT/dropWhile v pred))
 
 (defn flattenv [v] (vec (flatten v)))                       ;; good enough

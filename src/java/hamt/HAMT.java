@@ -281,4 +281,20 @@ class HAMT {
         }
         return newVec;
     }
+
+    public HAMT takeLast(int n) {
+        return null;
+    }
+
+    public HAMT dropLast(int n) {
+        return null;
+    }
+
+    public HAMT takeWhile(IFn p) {
+        return null;
+    }
+
+    public HAMT dropWhile(IFn p) {
+        return null;
+    }
 }

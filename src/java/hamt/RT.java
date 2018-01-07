@@ -55,4 +55,20 @@ public class RT {
     public static PersistentVector drop(PersistentVector that, int n) {
         return HAMT.fromVector(that).drop(n).persistentVector();
     }
+
+    public static PersistentVector takeLast (PersistentVector that, int n) {
+        return HAMT.fromVector(that).takeLast(n).persistentVector();
+    }
+
+    public static PersistentVector dropLast (PersistentVector that, int n) {
+        return HAMT.fromVector(that).dropLast(n).persistentVector();
+    }
+
+    public static PersistentVector takeWhile(PersistentVector that, IFn p) {
+        return HAMT.fromVector(that).takeWhile(p).persistentVector();
+    }
+
+    public static PersistentVector dropWhile(PersistentVector that, IFn p) {
+        return HAMT.fromVector(that).dropWhile(p).persistentVector();
+    }
 }
