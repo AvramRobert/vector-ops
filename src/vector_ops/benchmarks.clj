@@ -4,6 +4,7 @@
 
 (def data (vec (range 0 1000000)))
 (def spread-data (mapv (constantly data) (range 0 10)))
+(def n 425166)
 
 (defmacro measure [expr]
   `(with-progress-reporting (bench ~expr :verbose)))
@@ -24,10 +25,16 @@
   (measure (c/mapv inc data)))
 
 (defn bench-take-clj []
-  (measure (vec (take 425166 data))))
+  (measure (vec (take n data))))
 
 (defn bench-take-opt []
-  (measure (c/takev 425166 data)))
+  (measure (c/takev n data)))
+
+(defn bench-drop-clj []
+  (measure (vec (drop n data))))
+
+(defn bench-drop-opt []
+  (measure (c/dropv n data)))
 
 (defn -main [& args]
   (bench-take-opt))

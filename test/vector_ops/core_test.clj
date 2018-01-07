@@ -22,3 +22,8 @@
          (for-all [v (gen/vector gen/int)
                    i gen/int]
                   (is (= (take i v) (takev i v)))))
+
+(defspec dropping
+         (for-all [v (gen/vector gen/int)
+                   i gen/int]
+                  (is (= (drop i v) (dropv i v)))))

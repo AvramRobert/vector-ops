@@ -144,11 +144,12 @@ class HAMT {
             this.tail = that.tail;
         }
         else {
+            int count = that.count();
             int leftSize = tail.length;
             int rightSize;
             Object[] node;
             fillTail();
-            for (int i = 0; i < that.count(); i+=32) {
+            for (int i = 0; i < count; i+=32) {
                 node = that.arrayFor(i);
                 if (isLastIn(that, i) && canContain(node)) {
                     System.arraycopy(node, 0, tail, leftSize, node.length);
@@ -182,30 +183,26 @@ class HAMT {
         }
     }
 
-    private void pushNodeMut (Object[] node) {
+    private void pushNodeMut (Object[] node, int nodeSize) {
         if (size >>> 5 > 1 << shift) {
             Node newTree = nodeFrom(tree);
             newTree.array[0] = tree;
             newTree.array[1] = path(new Node (tree.edit, tail), shift);
             this.tree = newTree;
             this.shift += 5;
-        } else {
+        }
+        else if (size > 0) {
             pushMut(tree, tail, shift);
         }
         this.tail = node;
-        this.size += node.length;
+        this.size += nodeSize;
     }
 
     private void pushNodesMut(PersistentVector vec, int from, int to) {
         Object[] node;
         for (int i = from; i < to; i++) {
             node = vec.arrayFor(i*32);
-            if (size == 0) {
-                this.tail = node;
-                this.size += node.length;
-            } else {
-                pushNodeMut(node);
-            }
+            pushNodeMut(node, node.length);
         }
     }
 
@@ -222,12 +219,7 @@ class HAMT {
         for (int i = 0; i < count; i += 32) {
             Object[] node = vec.arrayFor(i).clone();
             mapArray(node, f);
-            if (newVec.size == 0) {
-                newVec.tail = node;
-                newVec.size += node.length;
-            } else {
-                newVec.pushNodeMut(node);
-            }
+            newVec.pushNodeMut(node, node.length);
         }
         return newVec;
     }
@@ -243,61 +235,52 @@ class HAMT {
             newVec.size += n;
         }
         else if ((n & 0x01f) == 0) {
-            int totalNodes = n / 32;
+            int totalNodes = n >>> 5;
             newVec.pushNodesMut(vec, 0, totalNodes);
         }
         else {
-            int totalNodes = n / 32;
+            int totalNodes = n >>> 5;
             int partial = n & 0x01f; // n % 32
             Object[] newTail = new Object[partial];
             newVec.pushNodesMut(vec, 0, totalNodes);
             System.arraycopy(vec.arrayFor(totalNodes*32), 0, newTail, 0, partial);
-            newVec.pushNodeMut(newTail);
+            newVec.pushNodeMut(newTail, partial);
         }
         return newVec;
     }
 
-    // For dropping, I think I may need to use the same strategy that I used for concatenating
-    // Just copy in batches of leftSize and rightSize
-    public HAMT drop (PersistentVector vec, int n) {
+    public HAMT drop(PersistentVector vec, int n) {
         HAMT newVec = emptyFrom(vec);
         if (n <= 0) return fromVector(vec);
         else if (n >= size) return newVec;
-        else if (n < 32) {
-            Object[] node = vec.arrayFor(0);
-            int amount = node.length - n;
-            Object[] newTail = new Object[amount];
-            System.arraycopy(node, n, newTail, 0, amount);
-            newVec.tail = newTail;
-            newVec.size += amount;
-        }
         else if ((n & 0x01f) == 0) {
-            int toRemove = n / 32;
-            int nodeSize = ((vec.count() - 1) >> 5) + 1;
-            newVec.pushNodesMut(vec, toRemove, nodeSize);
-        }
-        else {
+            int from = n >>> 5; // n / 32
+            int to = ((vec.count() - 1) >> 5) + 1;
+            newVec.pushNodesMut(vec, from, to);
+        } else {
+            int count = vec.count();
+            int from = (n >>> 5) << 5; // (floor n / 32) * 32
+            Object[] node = vec.arrayFor(from);
             int leftSize = n & 0x01f; // n % 32
-            int i = (n / 32) * 32;
-            int rightSize;
-            Object[] node = vec.arrayFor(i);
+            int rightSize = node.length - leftSize;
             newVec.tail = new Object[32];
-            while (i < vec.count()) {
-                if (node.length < 32) rightSize = node.length - leftSize;
-                else rightSize = 32 - leftSize;
-                System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
-                newVec.size += rightSize;
-                if (i+32 < vec.count()) {
-                    node = vec.arrayFor(i + 32);
-                    if (node.length < leftSize) leftSize = node.length;
-                    System.arraycopy(node, 0, newVec.tail, rightSize, leftSize);
-                    newVec.size += leftSize;
-                    if (!isLastIn(vec, i + 32)) {
-                        newVec.pushNodeMut(new Object[32]);
-                        newVec.size -= 32;
-                     }
+            newVec.size += rightSize;
+            System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
+            leftSize = rightSize;
+            for (int i = from + 32; i < count; i += 32) {
+                node = vec.arrayFor(i);
+                if (isLastIn(vec, i) && newVec.canContain(node)) {
+                    System.arraycopy(node, 0, newVec.tail, leftSize, node.length);
+                    newVec.size += node.length;
+                } else {
+                    Object[] newTail = new Object[32];
+                    rightSize = 32 - leftSize;
+                    System.arraycopy(node, 0, newVec.tail, leftSize, rightSize);
+                    leftSize = node.length - rightSize;
+                    System.arraycopy(node, rightSize, newTail, 0, leftSize);
+                    newVec.size += rightSize;
+                    newVec.pushNodeMut(newTail, leftSize);
                 }
-                i += 32;
             }
             newVec.trimTail();
         }
