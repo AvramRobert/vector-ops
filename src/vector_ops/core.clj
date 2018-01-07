@@ -12,10 +12,14 @@
 (defn mapv [f v] (hamt.RT/map v f))
 
 (defn takev [n v] (hamt.RT/take v n))
+
 (defn dropv [n v] (hamt.RT/drop v n))
+
 (defn splitv-at [at v] [(takev at v) (dropv at v)])
-(defn flattenv [v])
+
 (defn takev-last [n v])
 (defn dropv-last [n v])
 (defn takev-while [pred v])
 (defn dropv-while [pred v])
+
+(defn flattenv [v] (vec (flatten v)))                       ;; good enough

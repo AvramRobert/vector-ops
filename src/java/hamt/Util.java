@@ -1,5 +1,6 @@
 package hamt;
 
+import clojure.lang.IFn;
 import clojure.lang.PersistentVector;
 import clojure.lang.PersistentVector.Node;
 import java.util.Arrays;
@@ -30,5 +31,12 @@ public class Util {
 
     public static void printArray(Object[] arr) {
         println(Arrays.deepToString(arr));
+    }
+
+    public static void mapArray(Object[] arr, IFn f) {
+        int length = arr.length;
+        for (int i = 0; i < length && arr[i] != null; i++) {
+            arr[i] = f.invoke(arr[i]);
+        }
     }
 }

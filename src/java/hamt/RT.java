@@ -45,14 +45,14 @@ public class RT {
 
 
     public static PersistentVector map (PersistentVector that, IFn f) {
-        return HAMT.fromVector(that).map(that, f).persistentVector();
+        return HAMT.fromVector(that).map(f).persistentVector();
     }
 
     public static PersistentVector take(PersistentVector that, int n) {
-        return HAMT.fromVector(that).take(that, n).persistentVector();
+        return HAMT.fromVector(that).take(n).persistentVector();
     }
 
     public static PersistentVector drop(PersistentVector that, int n) {
-        return HAMT.fromVector(that).drop(that, n).persistentVector();
+        return HAMT.fromVector(that).drop(n).persistentVector();
     }
 }

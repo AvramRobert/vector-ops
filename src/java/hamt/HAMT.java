@@ -9,13 +9,15 @@ import static clojure.lang.PersistentVector.*;
 import static hamt.Util.*;
 
 class HAMT {
+    private final PersistentVector vector;
     private final IPersistentMap meta;
     private int size;
     private int shift;
     private Node tree;
     private Object[] tail;
 
-    public HAMT(IPersistentMap meta, int size, int shift, Node tree, Object[] tail) {
+    HAMT(PersistentVector vector, IPersistentMap meta, int size, int shift, Node tree, Object[] tail) {
+        this.vector = vector;
         this.meta = meta;
         this.size = size;
         this.shift = shift;
@@ -23,33 +25,8 @@ class HAMT {
         this.tail = tail;
     }
 
-    public static HAMT fromVector(PersistentVector vec) {
-        return new HAMT(vec.meta(), vec.count(), vec.shift, vec.root, vec.tail);
-    }
-
     private HAMT emptyFrom(PersistentVector vec) {
-        return new HAMT(vec.meta(), 0, 5, nodeFrom(vec.root), new Object[]{});
-    }
-
-    public PersistentVector persistentVector() {
-        try {
-            Constructor<PersistentVector> cons =
-                    PersistentVector.class.
-                            getDeclaredConstructor(
-                                    IPersistentMap.class,
-                                    int.class,
-                                    int.class,
-                                    Node.class,
-                                    Object[].class);
-            cons.setAccessible(true);
-            return cons.newInstance(meta, size, shift, tree, tail);
-        } catch (NoSuchMethodException |
-                IllegalAccessException |
-                InstantiationException |
-                InvocationTargetException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return new HAMT(vec, vec.meta(), 0, 5, nodeFrom(vec.root), new Object[]{});
     }
 
     private Node nodeFrom(Node that) {
@@ -58,6 +35,31 @@ class HAMT {
 
     private Node cloneNode(Node that) {
         return new Node(that.edit, that.array.clone());
+    }
+
+    private void fillTail() {
+        Object[] newTail = new Object[32];
+        System.arraycopy(tail, 0, newTail, 0, tail.length);
+        this.tail = newTail;
+    }
+
+    private boolean isLastIn(PersistentVector vec, int i) {
+        return i >= (vec.count() - vec.tail.length);
+    }
+
+    private int tailSize() {
+        return ((this.size - 1) % 32) + 1;
+    }
+
+    private boolean canContain(Object[] node) {
+        return (32 - tailSize()) >= node.length;
+    }
+
+    private void trimTail() {
+        int sz = tailSize();
+        Object[] newTail = new Object[sz];
+        System.arraycopy(tail, 0, newTail, 0, sz);
+        this.tail = newTail;
     }
 
     private Node path (Node that, int shift) {
@@ -108,29 +110,66 @@ class HAMT {
         }
     }
 
-    private void fillTail() {
-        Object[] newTail = new Object[32];
-        System.arraycopy(tail, 0, newTail, 0, tail.length);
-        this.tail = newTail;
+    private void pushMut (Node tree, Object[] node, int shift) {
+        int idx = ((this.size - 1) >>> shift) & 0x01f;
+        if (shift == 5) {
+            tree.array[idx] = new Node(tree.edit, node);
+        }
+        else {
+            Node subtree = (Node) tree.array[idx];
+            if (subtree == null) {
+                tree.array[idx] = path(new Node(tree.edit, node), shift - 5);
+            }
+            else pushMut(subtree, node, shift - 5);
+        }
     }
 
-    private boolean isLastIn(PersistentVector vec, int i) {
-        return i >= (vec.count() - vec.tail.length);
+    private void pushNodeMut (Object[] node, int nodeSize) {
+        if (size >>> 5 > 1 << shift) {
+            Node newTree = nodeFrom(tree);
+            newTree.array[0] = tree;
+            newTree.array[1] = path(new Node (tree.edit, tail), shift);
+            this.tree = newTree;
+            this.shift += 5;
+        }
+        else if (size > 0) {
+            pushMut(tree, tail, shift);
+        }
+        this.tail = node;
+        this.size += nodeSize;
     }
 
-    private int tailSize() {
-        return ((this.size - 1) % 32) + 1;
+    private void pushNodesMut(PersistentVector vec, int from, int to) {
+        Object[] node;
+        for (int i = from; i < to; i++) {
+            node = vec.arrayFor(i*32);
+            pushNodeMut(node, node.length);
+        }
     }
 
-    private boolean canContain(Object[] node) {
-        return (32 - tailSize()) >= node.length;
+    public PersistentVector persistentVector() {
+        try {
+            Constructor<PersistentVector> cons =
+                    PersistentVector.class.
+                            getDeclaredConstructor(
+                                    IPersistentMap.class,
+                                    int.class,
+                                    int.class,
+                                    Node.class,
+                                    Object[].class);
+            cons.setAccessible(true);
+            return cons.newInstance(meta, size, shift, tree, tail);
+        } catch (NoSuchMethodException |
+                IllegalAccessException |
+                InstantiationException |
+                InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
-    private void trimTail() {
-        int sz = tailSize();
-        Object[] newTail = new Object[sz];
-        System.arraycopy(tail, 0, newTail, 0, sz);
-        this.tail = newTail;
+    public static HAMT fromVector(PersistentVector vec) {
+        return new HAMT(vec, vec.meta(), vec.count(), vec.shift, vec.root, vec.tail);
     }
 
     public HAMT concat(PersistentVector that) {
@@ -169,98 +208,54 @@ class HAMT {
         return this;
     }
 
-    private void pushMut (Node tree, Object[] node, int shift) {
-        int idx = ((this.size - 1) >>> shift) & 0x01f;
-        if (shift == 5) {
-            tree.array[idx] = new Node(tree.edit, node);
-        }
-        else {
-            Node subtree = (Node) tree.array[idx];
-            if (subtree == null) {
-                tree.array[idx] = path(new Node(tree.edit, node), shift - 5);
-            }
-            else pushMut(subtree, node, shift - 5);
-        }
-    }
-
-    private void pushNodeMut (Object[] node, int nodeSize) {
-        if (size >>> 5 > 1 << shift) {
-            Node newTree = nodeFrom(tree);
-            newTree.array[0] = tree;
-            newTree.array[1] = path(new Node (tree.edit, tail), shift);
-            this.tree = newTree;
-            this.shift += 5;
-        }
-        else if (size > 0) {
-            pushMut(tree, tail, shift);
-        }
-        this.tail = node;
-        this.size += nodeSize;
-    }
-
-    private void pushNodesMut(PersistentVector vec, int from, int to) {
-        Object[] node;
-        for (int i = from; i < to; i++) {
-            node = vec.arrayFor(i*32);
-            pushNodeMut(node, node.length);
-        }
-    }
-
-    private void mapArray(Object[] arr, IFn f) {
-        int length = arr.length;
-        for (int i = 0; i < length && arr[i] != null; i++) {
-            arr[i] = f.invoke(arr[i]);
-        }
-    }
-
-    public HAMT map (PersistentVector vec, IFn f) {
-        HAMT newVec = emptyFrom(vec);
-        int count = vec.count();
+    public HAMT map (IFn f) {
+        HAMT newVec = emptyFrom(vector);
+        int count = vector.count();
         for (int i = 0; i < count; i += 32) {
-            Object[] node = vec.arrayFor(i).clone();
+            Object[] node = vector.arrayFor(i).clone();
             mapArray(node, f);
             newVec.pushNodeMut(node, node.length);
         }
         return newVec;
     }
 
-    public HAMT take (PersistentVector vec, int n) {
-        HAMT newVec = emptyFrom(vec);
+    public HAMT take (int n) {
+        HAMT newVec = emptyFrom(vector);
         if (n <= 0) return newVec;
-        else if (n > size) return fromVector(vec);
+        else if (n >= size) return fromVector(vector);
         else if (n < 32) {
             Object[] newTail = new Object[n];
-            System.arraycopy(vec.arrayFor(0), 0, newTail, 0, n);
+            System.arraycopy(vector.arrayFor(0), 0, newTail, 0, n);
             newVec.tail = newTail;
             newVec.size += n;
         }
         else if ((n & 0x01f) == 0) {
             int totalNodes = n >>> 5;
-            newVec.pushNodesMut(vec, 0, totalNodes);
+            newVec.pushNodesMut(vector, 0, totalNodes);
         }
         else {
             int totalNodes = n >>> 5;
             int partial = n & 0x01f; // n % 32
             Object[] newTail = new Object[partial];
-            newVec.pushNodesMut(vec, 0, totalNodes);
-            System.arraycopy(vec.arrayFor(totalNodes*32), 0, newTail, 0, partial);
+            newVec.pushNodesMut(vector, 0, totalNodes);
+            System.arraycopy(vector.arrayFor(totalNodes*32), 0, newTail, 0, partial);
             newVec.pushNodeMut(newTail, partial);
         }
         return newVec;
     }
 
-    public HAMT drop(PersistentVector vec, int n) {
-        HAMT newVec = emptyFrom(vec);
-        if (n <= 0) return fromVector(vec);
+    public HAMT drop(int n) {
+        HAMT newVec = emptyFrom(vector);
+        if (n <= 0) return fromVector(vector);
         else if (n >= size) return newVec;
         else if ((n & 0x01f) == 0) {
             int from = n >>> 5; // n / 32
-            int to = ((vec.count() - 1) >> 5) + 1;
-            newVec.pushNodesMut(vec, from, to);
+            int to = ((vector.count() - 1) >> 5) + 1;
+            newVec.pushNodesMut(vector, from, to);
         } else {
-            int count = vec.count();
+            int count = vector.count();
             int from = (n >>> 5) << 5; // (floor n / 32) * 32
-            Object[] node = vec.arrayFor(from);
+            Object[] node = vector.arrayFor(from);
             int leftSize = n & 0x01f; // n % 32
             int rightSize = node.length - leftSize;
             newVec.tail = new Object[32];
@@ -268,8 +263,8 @@ class HAMT {
             System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
             leftSize = rightSize;
             for (int i = from + 32; i < count; i += 32) {
-                node = vec.arrayFor(i);
-                if (isLastIn(vec, i) && newVec.canContain(node)) {
+                node = vector.arrayFor(i);
+                if (isLastIn(vector, i) && newVec.canContain(node)) {
                     System.arraycopy(node, 0, newVec.tail, leftSize, node.length);
                     newVec.size += node.length;
                 } else {

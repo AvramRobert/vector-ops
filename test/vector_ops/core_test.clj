@@ -19,11 +19,16 @@
 
 
 (defspec taking
-         (for-all [v (gen/vector gen/int)
-                   i gen/int]
-                  (is (= (take i v) (takev i v)))))
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))]
+                    (is (= (take i v) (takev i v))))))
 
 (defspec dropping
-         (for-all [v (gen/vector gen/int)
-                   i gen/int]
-                  (is (= (drop i v) (dropv i v)))))
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))]
+                    (is (= (drop i v) (dropv i v))))))
+
+(defspec splitting
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))]
+                    (is (= (clojure.core/mapv vec (split-at i v)) (splitv-at i v))))))
