@@ -36,5 +36,11 @@
 (defn bench-drop-opt []
   (measure (c/dropv n data)))
 
+(defn bench-split-clj []
+  (measure (mapv vec (split-at n data))))
+
+(defn bench-split-opt []
+  (measure (c/splitv-at n data)))
+
 (defn -main [& args]
-  (bench-take-opt))
+  (bench-split-opt))
