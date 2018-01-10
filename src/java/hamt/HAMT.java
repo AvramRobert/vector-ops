@@ -3,8 +3,10 @@ package hamt;
 import clojure.lang.IFn;
 import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentVector;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+
 import static clojure.lang.PersistentVector.*;
 import static hamt.Util.*;
 
@@ -62,7 +64,7 @@ class HAMT {
         this.tail = newTail;
     }
 
-    private Node path (Node that, int shift) {
+    private Node path(Node that, int shift) {
         if (shift == 0) return that;
         else {
             Node node = nodeFrom(that);
@@ -71,24 +73,23 @@ class HAMT {
         }
     }
 
-    private Node push (Node tree, Object[] that, int shift) {
+    private Node push(Node tree, Object[] that, int shift) {
         int i = ((size - 1) >>> shift) & 0x01f;
         Node newTree = cloneNode(tree);
         if (shift == 5) {
             newTree.array[i] = new Node(tree.edit, that);
-        }
-        else {
+        } else {
             Node subtree = (Node) tree.array[i];
             if (subtree == null) {
                 newTree.array[i] = path(new Node(tree.edit, that), shift - 5);
             } else {
-                push((Node)newTree.array[i], that, shift - 5);
+                push((Node) newTree.array[i], that, shift - 5);
             }
         }
         return newTree;
     }
 
-    private void pushNode (Object[] node, int nodeSize) {
+    private void pushNode(Object[] node, int nodeSize) {
         if (size >>> 5 > 1 << shift) {
             Node newRoot = nodeFrom(tree);
             newRoot.array[0] = tree;
@@ -102,7 +103,7 @@ class HAMT {
         this.size += nodeSize;
     }
 
-    private void pushNodes (PersistentVector tht) {
+    private void pushNodes(PersistentVector tht) {
         Object[] node;
         for (int i = 0; i < tht.count(); i += 32) {
             node = tht.arrayFor(i);
@@ -110,29 +111,26 @@ class HAMT {
         }
     }
 
-    private void pushMut (Node tree, Object[] node, int shift) {
+    private void pushMut(Node tree, Object[] node, int shift) {
         int idx = ((this.size - 1) >>> shift) & 0x01f;
         if (shift == 5) {
             tree.array[idx] = new Node(tree.edit, node);
-        }
-        else {
+        } else {
             Node subtree = (Node) tree.array[idx];
             if (subtree == null) {
                 tree.array[idx] = path(new Node(tree.edit, node), shift - 5);
-            }
-            else pushMut(subtree, node, shift - 5);
+            } else pushMut(subtree, node, shift - 5);
         }
     }
 
-    private void pushNodeMut (Object[] node, int nodeSize) {
+    private void pushNodeMut(Object[] node, int nodeSize) {
         if (size >>> 5 > 1 << shift) {
             Node newTree = nodeFrom(tree);
             newTree.array[0] = tree;
-            newTree.array[1] = path(new Node (tree.edit, tail), shift);
+            newTree.array[1] = path(new Node(tree.edit, tail), shift);
             this.tree = newTree;
             this.shift += 5;
-        }
-        else if (size > 0) {
+        } else if (size > 0) {
             pushMut(tree, tail, shift);
         }
         this.tail = node;
@@ -142,9 +140,20 @@ class HAMT {
     private void pushNodesMut(PersistentVector vec, int from, int to) {
         Object[] node;
         for (int i = from; i < to; i++) {
-            node = vec.arrayFor(i*32);
+            node = vec.arrayFor(i * 32);
             pushNodeMut(node, node.length);
         }
+    }
+
+    private void appendMut(Object a) {
+        if (tail.length < 32) {
+            int length = tail.length;
+            Object[] newTail = new Object[length + 1];
+            System.arraycopy(tail, 0, newTail, 0, length);
+            newTail[length] = a;
+            this.tail = newTail;
+            this.size += 1;
+        } else pushNodeMut(new Object[]{a}, 1);
     }
 
     public PersistentVector persistentVector() {
@@ -175,20 +184,18 @@ class HAMT {
     public HAMT concat(PersistentVector that) {
         if (tail.length == 32) {
             pushNodes(that);
-        }
-        else if (size == 0) {
+        } else if (size == 0) {
             this.size = that.count();
             this.shift = that.shift;
             this.tree = that.root;
             this.tail = that.tail;
-        }
-        else {
+        } else {
             int count = that.count();
             int leftSize = tail.length;
             int rightSize;
             Object[] node;
             fillTail();
-            for (int i = 0; i < count; i+=32) {
+            for (int i = 0; i < count; i += 32) {
                 node = that.arrayFor(i);
                 if (isLastIn(that, i) && canContain(node)) {
                     System.arraycopy(node, 0, tail, leftSize, node.length);
@@ -208,7 +215,7 @@ class HAMT {
         return this;
     }
 
-    public HAMT map (IFn f) {
+    public HAMT map(IFn f) {
         HAMT newVec = emptyFrom(vector);
         int count = vector.count();
         for (int i = 0; i < count; i += 32) {
@@ -219,7 +226,7 @@ class HAMT {
         return newVec;
     }
 
-    public HAMT take (int n) {
+    public HAMT take(int n) {
         HAMT newVec = emptyFrom(vector);
         if (n <= 0) return newVec;
         else if (n >= size) return fromVector(vector);
@@ -228,17 +235,15 @@ class HAMT {
             System.arraycopy(vector.arrayFor(0), 0, newTail, 0, n);
             newVec.tail = newTail;
             newVec.size += n;
-        }
-        else if ((n & 0x01f) == 0) {
+        } else if ((n & 0x01f) == 0) {
             int totalNodes = n >>> 5;
             newVec.pushNodesMut(vector, 0, totalNodes);
-        }
-        else {
+        } else {
             int totalNodes = n >>> 5;
             int partial = n & 0x01f; // n % 32
             Object[] newTail = new Object[partial];
             newVec.pushNodesMut(vector, 0, totalNodes);
-            System.arraycopy(vector.arrayFor(totalNodes*32), 0, newTail, 0, partial);
+            System.arraycopy(vector.arrayFor(totalNodes * 32), 0, newTail, 0, partial);
             newVec.pushNodeMut(newTail, partial);
         }
         return newVec;
@@ -282,11 +287,64 @@ class HAMT {
         return newVec;
     }
 
+    private boolean toBoolean(Object a) {
+        try { return (Boolean) a; } catch (Exception e) { return false; }
+    }
+    private boolean invokePred(IFn p, Object a) {
+        if (a != null) {
+            Object ret = p.invoke(a);
+            return toBoolean(ret) && ret != null;
+        } else return false;
+    }
+
     public HAMT takeWhile(IFn p) {
-        return null;
+        HAMT newVec = emptyFrom(vector);
+        int size = vector.count();
+        boolean go = true;
+        int i = 0;
+        int y = 0;
+        Object[] node;
+        Object a;
+        while (go && i < size) {
+            node = vector.arrayFor(i);
+            int nodeLength = node.length;
+            while (y < nodeLength) {
+                a = node[y];
+                y++;
+                if (invokePred(p, a)) newVec.appendMut(a);
+                else {
+                    go = false;
+                    break;
+                }
+            }
+            y = 0;
+            i += 32;
+        }
+        return newVec;
     }
 
     public HAMT dropWhile(IFn p) {
-        return null;
+        Object[] node;
+        int size = vector.size();
+        int amount = 0;
+        int i = 0;
+        int y = 0;
+        boolean go = true;
+        while(go && i < size) {
+            node = vector.arrayFor(i);
+            i += 32;
+            int nodeLength = node.length;
+            while (y < nodeLength) {
+                if (invokePred(p, node[y])) {
+                    amount++;
+                } else {
+                    go = false;
+                    break;
+                }
+                y++;
+            }
+            y = 0;
+        }
+        return drop(amount);
     }
 }

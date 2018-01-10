@@ -42,3 +42,15 @@
          (for-all [v (gen/vector gen/int)]
                   (let [i (rand-int (count v))]
                     (is (= (vec (drop-last i v)) (dropv-last i v))))))
+
+(defspec taking-while
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))
+                        p #(< % i)]
+                    (is (= (vec (take-while p v)) (takev-while p v))))))
+
+(defspec dropping-while
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (rand-int (count v))
+                        p #(< % i)]
+                    (is (= (vec (drop-while p v)) (dropv-while p v))))))

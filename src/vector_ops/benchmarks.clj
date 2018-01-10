@@ -5,6 +5,7 @@
 (def data (vec (range 0 1000000)))
 (def spread-data (mapv (constantly data) (range 0 10)))
 (def n 425166)
+(def p #(< % n))
 
 (defmacro measure [expr]
   `(with-progress-reporting (bench ~expr :verbose)))
@@ -42,5 +43,17 @@
 (defn bench-split-opt []
   (measure (c/splitv-at n data)))
 
+(defn bench-take-while-clj []
+  (measure (vec (take-while p data))))
+
+(defn bench-take-while-opt []
+  (measure (c/takev-while p data)))
+
+(defn bench-drop-while-clj []
+  (measure (vec (drop-while p data))))
+
+(defn bench-drop-while-opt []
+  (measure (c/dropv-while p data)))
+
 (defn -main [& args]
-  (bench-split-opt))
+  (bench-take-while-opt))
