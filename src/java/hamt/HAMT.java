@@ -39,6 +39,16 @@ class HAMT {
         return new Node(that.edit, that.array.clone());
     }
 
+    private boolean toBoolean(Object a) {
+        try { return (Boolean) a; } catch (Exception e) { return false; }
+    }
+    private boolean invokePred(IFn p, Object a) {
+        if (a != null) {
+            Object ret = p.invoke(a);
+            return toBoolean(ret) && ret != null;
+        } else return false;
+    }
+
     private void fillTail() {
         Object[] newTail = new Object[32];
         System.arraycopy(tail, 0, newTail, 0, tail.length);
@@ -62,6 +72,32 @@ class HAMT {
         Object[] newTail = new Object[sz];
         System.arraycopy(tail, 0, newTail, 0, sz);
         this.tail = newTail;
+    }
+
+    private void chunkedCopy(HAMT newVec, int from, int leftSize) {
+        Object[] node = vector.arrayFor(from);
+        int count = vector.count();
+        int rightSize = node.length - leftSize;
+        newVec.tail = new Object[32];
+        newVec.size += rightSize;
+        System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
+        leftSize = rightSize;
+        for (int i = from + 32; i < count; i += 32) {
+            node = vector.arrayFor(i);
+            if (isLastIn(vector, i) && newVec.canContain(node)) {
+                System.arraycopy(node, 0, newVec.tail, leftSize, node.length);
+                newVec.size += node.length;
+            } else {
+                Object[] newTail = new Object[32];
+                rightSize = 32 - leftSize;
+                System.arraycopy(node, 0, newVec.tail, leftSize, rightSize);
+                leftSize = node.length - rightSize;
+                System.arraycopy(node, rightSize, newTail, 0, leftSize);
+                newVec.size += rightSize;
+                newVec.pushNodeMut(newTail, leftSize);
+            }
+        }
+        newVec.trimTail();
     }
 
     private Node path(Node that, int shift) {
@@ -258,54 +294,22 @@ class HAMT {
             int to = ((vector.count() - 1) >> 5) + 1;
             newVec.pushNodesMut(vector, from, to);
         } else {
-            int count = vector.count();
             int from = (n >>> 5) << 5; // (floor n / 32) * 32
-            Object[] node = vector.arrayFor(from);
             int leftSize = n & 0x01f; // n % 32
-            int rightSize = node.length - leftSize;
-            newVec.tail = new Object[32];
-            newVec.size += rightSize;
-            System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
-            leftSize = rightSize;
-            for (int i = from + 32; i < count; i += 32) {
-                node = vector.arrayFor(i);
-                if (isLastIn(vector, i) && newVec.canContain(node)) {
-                    System.arraycopy(node, 0, newVec.tail, leftSize, node.length);
-                    newVec.size += node.length;
-                } else {
-                    Object[] newTail = new Object[32];
-                    rightSize = 32 - leftSize;
-                    System.arraycopy(node, 0, newVec.tail, leftSize, rightSize);
-                    leftSize = node.length - rightSize;
-                    System.arraycopy(node, rightSize, newTail, 0, leftSize);
-                    newVec.size += rightSize;
-                    newVec.pushNodeMut(newTail, leftSize);
-                }
-            }
-            newVec.trimTail();
+            chunkedCopy(newVec, from, leftSize);
         }
         return newVec;
     }
 
-    private boolean toBoolean(Object a) {
-        try { return (Boolean) a; } catch (Exception e) { return false; }
-    }
-    private boolean invokePred(IFn p, Object a) {
-        if (a != null) {
-            Object ret = p.invoke(a);
-            return toBoolean(ret) && ret != null;
-        } else return false;
-    }
-
     public HAMT takeWhile(IFn p) {
         HAMT newVec = emptyFrom(vector);
-        int size = vector.count();
+        int count = vector.count();
         boolean go = true;
         int i = 0;
         int y = 0;
         Object[] node;
         Object a;
-        while (go && i < size) {
+        while (go && i < count) {
             node = vector.arrayFor(i);
             int nodeLength = node.length;
             while (y < nodeLength) {
@@ -325,14 +329,13 @@ class HAMT {
 
     public HAMT dropWhile(IFn p) {
         Object[] node;
-        int size = vector.size();
+        int count = vector.size();
         int amount = 0;
-        int i = 0;
+        int from = 0;
         int y = 0;
         boolean go = true;
-        while(go && i < size) {
-            node = vector.arrayFor(i);
-            i += 32;
+        while(go && from < count) {
+            node = vector.arrayFor(from);
             int nodeLength = node.length;
             while (y < nodeLength) {
                 if (invokePred(p, node[y])) {
@@ -343,8 +346,21 @@ class HAMT {
                 }
                 y++;
             }
+            from += 32;
             y = 0;
         }
-        return drop(amount);
+        if (amount > 0) {
+            HAMT newVec = emptyFrom(vector);
+            if (amount < count) {
+                from -= 32;
+                int leftSize = amount & 0x01f; // amount % 32
+                if (leftSize == 0) {
+                    int n = ((count - 1) >> 5) + 1;
+                    newVec.pushNodesMut(vector, from >> 5, n);
+                }
+                else chunkedCopy(newVec, from, leftSize);
+            }
+            return newVec;
+        } else return fromVector(vector);
     }
 }
