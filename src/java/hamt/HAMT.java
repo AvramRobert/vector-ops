@@ -363,4 +363,12 @@ class HAMT {
             return newVec;
         } else return fromVector(vector);
     }
+
+    public HAMT takeLastWhile(IFn p) {
+        return fromVector(vector);
+    }
+
+    public HAMT dropLastWhile(IFn p) {
+        return fromVector(vector);
+    }
 }

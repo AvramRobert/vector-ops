@@ -54,3 +54,17 @@
                   (let [i (if (empty? v) 0 (rand-nth v))
                         p #(< % i)]
                     (is (= (vec (drop-while p v)) (dropv-while p v))))))
+
+(defspec taking-last-while
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (if (empty? v) 0 (rand-nth v))
+                        p #(> % i)]
+                    (is (= (->> (reverse v) (take-while p) (reverse) (vec))
+                           (takev-last-while p v))))))
+
+(defspec dropping-last-while
+         (for-all [v (gen/vector gen/int)]
+                  (let [i (if (empty? v) 0 (rand-nth v))
+                        p #(> % i)]
+                    (is (= (->> (reverse v) (drop-while p) (reverse) (vec))
+                           (dropv-last-while p v))))))

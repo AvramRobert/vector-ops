@@ -25,6 +25,10 @@
 
 (defn dropv-while [pred v] (hamt.RT/dropWhile v pred))
 
-(defn reversev [v] (vec (flatten v)))                       ;; good enough
+(defn takev-last-while [pred v] (hamt.RT/takeLastWhile v pred))
+
+(defn dropv-last-while [pred v] (hamt.RT/dropLastWhile v pred))
+
+(defn reversev [v] (vec (reverse v)))                       ;; good enough
 
 (defn flattenv [v] (vec (flatten v)))                       ;; good enough
