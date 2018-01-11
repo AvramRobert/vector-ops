@@ -56,4 +56,4 @@
   (measure (c/dropv-while p data)))
 
 (defn -main [& args]
-  (bench-take-while-opt))
+  (bench-drop-while-opt))
