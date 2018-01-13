@@ -19,7 +19,7 @@ class HAMT {
     private Node tree;
     private Object[] tail;
 
-    HAMT(PersistentVector vector, IPersistentMap meta, int size, int shift, Node tree, Object[] tail) {
+    private HAMT(PersistentVector vector, IPersistentMap meta, int size, int shift, Node tree, Object[] tail) {
         this.vector = vector;
         this.meta = meta;
         this.size = size;
@@ -66,7 +66,7 @@ class HAMT {
     }
 
     private int tailSize() {
-        return ((this.size - 1) % 32) + 1;
+        return ((this.size - 1) & 0x01f) + 1;
     }
 
     private boolean canContain(Object[] node) {
@@ -81,15 +81,14 @@ class HAMT {
     }
 
     private void chunkedCopy(HAMT newVec, int from, int leftSize) {
-        Object[] node = vector.arrayFor(from);
-        int count = vector.count();
+        Object[] node = nodeAt(from);
         int rightSize = node.length - leftSize;
         newVec.tail = new Object[32];
         newVec.size += rightSize;
         System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
         leftSize = rightSize;
-        for (int i = from + 32; i < count; i += 32) {
-            node = vector.arrayFor(i);
+        for (int i = from + 32; i < size; i += 32) {
+            node = nodeAt(i);
             if (isLastIn(vector, i) && newVec.canContain(node)) {
                 System.arraycopy(node, 0, newVec.tail, leftSize, node.length);
                 newVec.size += node.length;
@@ -104,6 +103,17 @@ class HAMT {
             }
         }
         newVec.trimTail();
+    }
+
+    private int reverseCountWhile(IFn p) {
+        int i = size;
+        Object a;
+        while (i >= 0) {
+            a = lookup(i - 1);
+            if (invokePred(p, a)) i--;
+            else break;
+        }
+        return i;
     }
 
     private Node path(Node that, int shift) {
@@ -198,6 +208,30 @@ class HAMT {
         } else pushNodeMut(new Object[]{a}, 1);
     }
 
+    private Object[] nodeAt(int idx) {
+        if (idx >= (size - tailSize())) return tail;
+        else {
+            Object[] node = tree.array;
+            for (int s = shift; s > 0; s -= 5) {
+                int i = (idx >>> s) & 0x01f;
+                node = ((Node) node[i]).array;
+            }
+            return node;
+        }
+    }
+
+    private Object lookup(int idx) {
+        if (idx >= (size - tailSize())) return tail[idx & 0x01f];
+        else {
+            Node node = tree;
+            for (int s = shift; s > 0; s -= 5) {
+                int i = (idx >>> s) & 0x01f;
+                node = (Node) node.array[i];
+            }
+            return node.array[idx & 0x01f];
+        }
+    }
+
     public PersistentVector persistentVector() {
         try {
             Constructor<PersistentVector> cons =
@@ -259,9 +293,8 @@ class HAMT {
 
     public HAMT map(IFn f) {
         HAMT newVec = emptyFrom(vector);
-        int count = vector.count();
-        for (int i = 0; i < count; i += 32) {
-            Object[] node = vector.arrayFor(i).clone();
+        for (int i = 0; i < size; i += 32) {
+            Object[] node = nodeAt(i).clone();
             mapArray(node, f);
             newVec.pushNodeMut(node, node.length);
         }
@@ -274,7 +307,7 @@ class HAMT {
         else if (n >= size) return fromVector(vector);
         else if (n < 32) {
             Object[] newTail = new Object[n];
-            System.arraycopy(vector.arrayFor(0), 0, newTail, 0, n);
+            System.arraycopy(nodeAt(0), 0, newTail, 0, n);
             newVec.tail = newTail;
             newVec.size += n;
         } else if ((n & 0x01f) == 0) {
@@ -285,7 +318,7 @@ class HAMT {
             int partial = n & 0x01f; // n % 32
             Object[] newTail = new Object[partial];
             newVec.pushNodesMut(vector, 0, totalNodes);
-            System.arraycopy(vector.arrayFor(totalNodes * 32), 0, newTail, 0, partial);
+            System.arraycopy(nodeAt(totalNodes * 32), 0, newTail, 0, partial);
             newVec.pushNodeMut(newTail, partial);
         }
         return newVec;
@@ -309,14 +342,13 @@ class HAMT {
 
     public HAMT takeWhile(IFn p) {
         HAMT newVec = emptyFrom(vector);
-        int count = vector.count();
         boolean go = true;
         int i = 0;
         int y = 0;
         Object[] node;
         Object a;
-        while (go && i < count) {
-            node = vector.arrayFor(i);
+        while (go && i < size) {
+            node = nodeAt(i);
             int nodeLength = node.length;
             while (y < nodeLength) {
                 a = node[y];
@@ -335,13 +367,12 @@ class HAMT {
 
     public HAMT dropWhile(IFn p) {
         Object[] node;
-        int count = vector.size();
         int amount = 0;
         int from = 0;
         int y = 0;
         boolean go = true;
-        while (go && from < count) {
-            node = vector.arrayFor(from);
+        while (go && from < size) {
+            node = nodeAt(from);
             int nodeLength = node.length;
             while (y < nodeLength) {
                 if (invokePred(p, node[y])) {
@@ -357,11 +388,11 @@ class HAMT {
         }
         if (amount > 0) {
             HAMT newVec = emptyFrom(vector);
-            if (amount < count) {
+            if (amount < size) {
                 from -= 32;
                 int leftSize = amount & 0x01f; // amount % 32
                 if (leftSize == 0) {
-                    int n = ((count - 1) >> 5) + 1;
+                    int n = ((size - 1) >> 5) + 1;
                     newVec.pushNodesMut(vector, from >> 5, n);
                 } else chunkedCopy(newVec, from, leftSize);
             }
@@ -371,31 +402,12 @@ class HAMT {
 
     public HAMT takeLastWhile(IFn p) {
         if (size == 0) return fromVector(vector);
-        else if (!invokePred(p, vector.nth(size - 1))) return emptyFrom(vector);
-        else {
-            int i = size;
-            Object a;
-            while (i >= 0) {
-                a = vector.nth(i - 1);
-                if (invokePred(p, a)) i--;
-                else break;
-            }
-
-            return drop(i);
-        }
+        else if (!invokePred(p, lookup(size - 1))) return emptyFrom(vector);
+        else return drop(reverseCountWhile(p));
     }
 
     public HAMT dropLastWhile(IFn p) {
         if (size == 0 || !invokePred(p, vector.nth(size - 1))) return fromVector(vector);
-        else {
-            int i = size;
-            Object a;
-            while (i >= 0) {
-                a = vector.nth(i - 1);
-                if (invokePred(p, a)) i--;
-                else break;
-            }
-            return take(i);
-        }
+        else return take(reverseCountWhile(p));
     }
 }
