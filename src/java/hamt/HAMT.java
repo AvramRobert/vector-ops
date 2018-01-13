@@ -1,11 +1,12 @@
 package hamt;
 
-import clojure.lang.IFn;
-import clojure.lang.IPersistentMap;
-import clojure.lang.PersistentVector;
+import clojure.lang.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Stack;
 
 import static clojure.lang.PersistentVector.*;
 import static hamt.Util.*;
@@ -40,8 +41,13 @@ class HAMT {
     }
 
     private boolean toBoolean(Object a) {
-        try { return (Boolean) a; } catch (Exception e) { return false; }
+        try {
+            return (Boolean) a;
+        } catch (Exception e) {
+            return false;
+        }
     }
+
     private boolean invokePred(IFn p, Object a) {
         if (a != null) {
             Object ret = p.invoke(a);
@@ -334,7 +340,7 @@ class HAMT {
         int from = 0;
         int y = 0;
         boolean go = true;
-        while(go && from < count) {
+        while (go && from < count) {
             node = vector.arrayFor(from);
             int nodeLength = node.length;
             while (y < nodeLength) {
@@ -357,18 +363,39 @@ class HAMT {
                 if (leftSize == 0) {
                     int n = ((count - 1) >> 5) + 1;
                     newVec.pushNodesMut(vector, from >> 5, n);
-                }
-                else chunkedCopy(newVec, from, leftSize);
+                } else chunkedCopy(newVec, from, leftSize);
             }
             return newVec;
         } else return fromVector(vector);
     }
 
     public HAMT takeLastWhile(IFn p) {
-        return fromVector(vector);
+        if (size == 0) return fromVector(vector);
+        else if (!invokePred(p, vector.nth(size - 1))) return emptyFrom(vector);
+        else {
+            int i = size;
+            Object a;
+            while (i >= 0) {
+                a = vector.nth(i - 1);
+                if (invokePred(p, a)) i--;
+                else break;
+            }
+
+            return drop(i);
+        }
     }
 
     public HAMT dropLastWhile(IFn p) {
-        return fromVector(vector);
+        if (size == 0 || !invokePred(p, vector.nth(size - 1))) return fromVector(vector);
+        else {
+            int i = size;
+            Object a;
+            while (i >= 0) {
+                a = vector.nth(i - 1);
+                if (invokePred(p, a)) i--;
+                else break;
+            }
+            return take(i);
+        }
     }
 }

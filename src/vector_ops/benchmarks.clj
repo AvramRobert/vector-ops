@@ -6,6 +6,7 @@
 (def spread-data (mapv (constantly data) (range 0 10)))
 (def n 425166)
 (def p #(< % n))
+(def p2 #(> % n))
 
 (defmacro measure [expr]
   `(with-progress-reporting (bench ~expr :verbose)))
@@ -55,5 +56,17 @@
 (defn bench-drop-while-opt []
   (measure (c/dropv-while p data)))
 
+(defn bench-take-last-while-clj [] []
+  (measure (->> (reverse data) (take-while p2) (reverse))))
+
+(defn bench-take-last-while-opt [] []
+  (measure (c/takev-last-while p2 data)))
+
+(defn bench-drop-last-while-clj []
+  (measure (->> (reverse data) (drop-while p2) (reverse))))
+
+(defn bench-drop-last-while-opt []
+  (measure (c/dropv-last-while p2 data)))
+
 (defn -main [& args]
-  (bench-drop-while-opt))
+  (bench-drop-last-while-opt))

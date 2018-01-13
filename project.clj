@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :java-source-paths ["src/java"]
-  :main vector-ops.core
+  :main vector-ops.benchmarks
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [criterium "0.4.4"]
                  [org.clojure/test.check "0.9.0"]])
