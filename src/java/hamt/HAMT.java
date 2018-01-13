@@ -221,15 +221,7 @@ class HAMT {
     }
 
     private Object lookup(int idx) {
-        if (idx >= (size - tailSize())) return tail[idx & 0x01f];
-        else {
-            Node node = tree;
-            for (int s = shift; s > 0; s -= 5) {
-                int i = (idx >>> s) & 0x01f;
-                node = (Node) node.array[i];
-            }
-            return node.array[idx & 0x01f];
-        }
+        return nodeAt(idx)[idx & 0x01f];
     }
 
     public PersistentVector persistentVector() {
