@@ -55,10 +55,6 @@ class HAMT {
         return ((this.size - 1) & 0x01f) + 1;
     }
 
-    private boolean canContain(Object[] node) {
-        return (32 - tailSize()) >= node.length;
-    }
-
     private void trimTail() {
         int sz = tailSize();
         Object[] newTail = new Object[sz];
@@ -66,25 +62,38 @@ class HAMT {
         this.tail = newTail;
     }
 
-    private void chunkedCopy(HAMT newVec, int from, int leftSize) {
+    private boolean canContain(int amount) {
+        return (32 - tailSize()) >= amount;
+    }
+
+    // use only when copying nodes that don't start from the node's beginning (0 or multiples of 32)
+    private void chunkedCopy(HAMT newVec, int from, int to, int leftSize) {
         Object[] node = nodeAt(from);
-        int rightSize = node.length - leftSize;
+        int rightSize;
+        if (node.length + from > to) { // both in the same node
+            rightSize = (to & 0x01f) - leftSize;
+        } else {
+            rightSize = node.length - leftSize;
+        }
         newVec.tail = new Object[32];
         newVec.size += rightSize;
         System.arraycopy(node, leftSize, newVec.tail, 0, rightSize);
         leftSize = rightSize;
-        for (int i = from + 32; i < size; i += 32) {
+        for (int i = from + 32; i < to; i += 32) {
             node = nodeAt(i);
-            if (isLastIn(vector, i) && newVec.canContain(node)) {
-                System.arraycopy(node, 0, newVec.tail, leftSize, node.length);
-                newVec.size += node.length;
+            int next = i + 32;
+            int nodeSize = to - i;
+            if (next > to && newVec.canContain(nodeSize)) {
+                System.arraycopy(node, 0, newVec.tail, leftSize, nodeSize);
+                newVec.size += nodeSize;
             } else {
                 Object[] newTail = new Object[32];
                 rightSize = 32 - leftSize;
                 System.arraycopy(node, 0, newVec.tail, leftSize, rightSize);
-                leftSize = node.length - rightSize;
-                System.arraycopy(node, rightSize, newTail, 0, leftSize);
                 newVec.size += rightSize;
+                leftSize = node.length - rightSize;
+                if (next > to) leftSize = (to & 0x01f) - rightSize;
+                System.arraycopy(node, rightSize, newTail, 0, leftSize);
                 newVec.pushNodeMut(newTail, leftSize);
             }
         }
@@ -251,7 +260,7 @@ class HAMT {
             fillTail();
             for (int i = 0; i < count; i += 32) {
                 node = that.arrayFor(i);
-                if (isLastIn(that, i) && canContain(node)) {
+                if (isLastIn(that, i) && canContain(node.length)) {
                     System.arraycopy(node, 0, tail, leftSize, node.length);
                     this.size += node.length;
                 } else {
@@ -304,7 +313,7 @@ class HAMT {
 
     public HAMT drop(int n) {
         HAMT newVec = empty();
-        if (n <= 0) return fromVector(vector);
+        if (n <= 0) return this;
         else if (n >= size) return newVec;
         else if ((n & 0x01f) == 0) {
             int from = n >>> 5; // n / 32
@@ -313,7 +322,7 @@ class HAMT {
         } else {
             int from = (n >>> 5) << 5; // (floor n / 32) * 32
             int leftSize = n & 0x01f; // n % 32
-            chunkedCopy(newVec, from, leftSize);
+            chunkedCopy(newVec, from, size, leftSize);
         }
         return newVec;
     }
@@ -372,7 +381,7 @@ class HAMT {
                 if (leftSize == 0) {
                     int n = ((size - 1) >> 5) + 1;
                     newVec.pushNodesMut(vector, from >> 5, n);
-                } else chunkedCopy(newVec, from, leftSize);
+                } else chunkedCopy(newVec, from, size, leftSize);
             }
             return newVec;
         } else return fromVector(vector);
@@ -387,5 +396,25 @@ class HAMT {
     public HAMT dropLastWhile(IFn p) {
         if (size == 0 || !invokePred(p, lookup(size - 1))) return fromVector(vector);
         else return take(reverseCountWhile(p));
+    }
+
+    public HAMT slice(int from, int to) {
+        HAMT newVec = empty();
+        if (to <= 0 || from >= to) return newVec;
+        else if (from < 0) return slice(0, to);
+        else if ((from & 0x01f) == 0) {
+            if (from + 32 < to) {
+                int total = to >>> 5;
+                int partial = to & 0x01f;
+                newVec.pushNodesMut(vector, from >>> 5, total);
+                Object[] arr = new Object[partial];
+                System.arraycopy(nodeAt(total * 32), 0, arr, 0, partial);
+                newVec.pushNodeMut(arr, partial);
+            } else chunkedCopy(newVec, from, to, from & 0x01f);
+        } else {
+            int start = (from >>> 5) << 5;
+            chunkedCopy(newVec, start, to, from & 0x01f);
+        }
+        return newVec;
     }
 }

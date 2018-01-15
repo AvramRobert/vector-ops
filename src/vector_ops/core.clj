@@ -26,6 +26,11 @@
   "`clojure.core/split-at` but optimised for vectors. Returns a vector of vectors"
   [at v] [(takev at v) (dropv at v)])
 
+(defn slicev [v from until]
+  "Similar to `clojure.core/subvec` but returns a proper vector in O(m) time, where m = until - from.
+   Its clojure equivalent is: (->> v (take until) (drop from) (vec))"
+  (hamt.RT/slice v from until))
+
 (defn takev-last
   "`clojure.core/take-last` but optimised for vectors. Returns a vector"
   [n v] (dropv (- (count v) n) v))
@@ -44,16 +49,14 @@
 
 (defn takev-last-while
   "Takes elements from the end of a vector as long as `pred` yields a truthy value.
-   Returns a vector. The order of the original vector is kept:
-
-  (takev-last-while #(> % 2) [1 2 3 4]) => [3 4]"
+   Returns a vector. The order of the original vector is kept.
+   Its clojure equivalent is: (->> v (reverse) (take-while pred) (reverse) (vec))"
   [pred v] (hamt.RT/takeLastWhile v pred))
 
 (defn dropv-last-while
   "Drops elements from the end of a vector as long as `pred` yields a truthy value.
    Returns a vector. The order of the original vector is kept:
-
-  (drop-last-while #(> % 2) [1 2 3 4]) => [1 2]"
+   Its clojure equivalent is: (->> v (reverse) (drop-while pred) (reverse) (vec))"
   [pred v] (hamt.RT/dropLastWhile v pred))
 
 (defn reversev

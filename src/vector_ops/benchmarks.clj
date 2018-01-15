@@ -5,6 +5,7 @@
 (def data (vec (range 0 1000000)))
 (def spread-data (mapv (constantly data) (range 0 10)))
 (def n 425166)
+(def m 785221)
 (def p #(< % n))
 (def p2 #(> % n))
 
@@ -68,5 +69,14 @@
 (defn bench-drop-last-while-opt []
   (measure (c/dropv-last-while p2 data)))
 
+(defn bench-subvec-clj []
+  (measure (subvec data n m)))
+
+(defn bench-slice-clj []
+  (measure (->> data (take m) (drop n) (vec))))
+
+(defn bench-slice-opt []
+  (measure (c/slicev data n m)))
+
 (defn -main [& args]
-  (bench-drop-last-while-opt))
+  (bench-slice-opt))

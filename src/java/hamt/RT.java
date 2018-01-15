@@ -69,4 +69,8 @@ public class RT {
     public static PersistentVector dropLastWhile(PersistentVector that, IFn p) {
         return HAMT.fromVector(that).dropLastWhile(p).persistentVector();
     }
+
+    public static PersistentVector slice(PersistentVector that, int from, int until) {
+        return HAMT.fromVector(that).slice(from, until).persistentVector();
+    }
 }

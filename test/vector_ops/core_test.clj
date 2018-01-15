@@ -78,3 +78,12 @@
                            (dropv-last-while p v)))
                     (is (= (->> (reverse v) (drop-while p2) (reverse) (vec))
                            (dropv-last-while p2 v))))))
+
+(defspec slicing
+         500
+         (for-all [v (gen/vector gen/int)]
+                  (let [c (count v)
+                        vals [(rand-int c) (rand-int c)]
+                        i (apply min vals)
+                        i2 (apply max vals)]
+                    (is (= (subvec v i i2) (slicev v i i2))))))
