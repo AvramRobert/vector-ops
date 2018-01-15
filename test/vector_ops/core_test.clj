@@ -46,25 +46,35 @@
 (defspec taking-while
          (for-all [v (gen/vector gen/int)]
                   (let [i (if (empty? v) 0 (rand-nth v))
-                        p #(< % i)]
-                    (is (= (vec (take-while p v)) (takev-while p v))))))
+                        p #(< % i)
+                        p2 #(when (p %) %)]
+                    (is (= (vec (take-while p v)) (takev-while p v)))
+                    (is (= (vec (take-while p2 v)) (takev-while p2 v))))))
 
 (defspec dropping-while
          (for-all [v (gen/vector gen/int)]
                   (let [i (if (empty? v) 0 (rand-nth v))
-                        p #(< % i)]
-                    (is (= (vec (drop-while p v)) (dropv-while p v))))))
+                        p #(< % i)
+                        p2 #(when (p %) %)]
+                    (is (= (vec (drop-while p v)) (dropv-while p v)))
+                    (is (= (vec (drop-while p2 v)) (dropv-while p2 v))))))
 
 (defspec taking-last-while
          (for-all [v (gen/vector gen/int)]
                   (let [i (if (empty? v) 0 (rand-nth v))
-                        p #(> % i)]
+                        p #(> % i)
+                        p2 #(when (p %) %)]
                     (is (= (->> (reverse v) (take-while p) (reverse) (vec))
-                           (takev-last-while p v))))))
+                           (takev-last-while p v)))
+                    (is (= (->> (reverse v) (take-while p2) (reverse) (vec))
+                           (takev-last-while p2 v))))))
 
 (defspec dropping-last-while
          (for-all [v (gen/vector gen/int)]
                   (let [i (if (empty? v) 0 (rand-nth v))
-                        p #(> % i)]
+                        p #(> % i)
+                        p2 #(when (p %) %)]
                     (is (= (->> (reverse v) (drop-while p) (reverse) (vec))
-                           (dropv-last-while p v))))))
+                           (dropv-last-while p v)))
+                    (is (= (->> (reverse v) (drop-while p2) (reverse) (vec))
+                           (dropv-last-while p2 v))))))

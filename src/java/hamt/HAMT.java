@@ -1,13 +1,8 @@
 package hamt;
 
 import clojure.lang.*;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Stack;
-
 import static clojure.lang.PersistentVector.*;
 import static hamt.Util.*;
 
@@ -28,8 +23,8 @@ class HAMT {
         this.tail = tail;
     }
 
-    private HAMT emptyFrom(PersistentVector vec) {
-        return new HAMT(vec, vec.meta(), 0, 5, nodeFrom(vec.root), new Object[]{});
+    private HAMT empty() {
+        return new HAMT(vector, meta, 0, 5, nodeFrom(vector.root), new Object[]{});
     }
 
     private Node nodeFrom(Node that) {
@@ -40,19 +35,10 @@ class HAMT {
         return new Node(that.edit, that.array.clone());
     }
 
-    private boolean toBoolean(Object a) {
-        try {
-            return (Boolean) a;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     private boolean invokePred(IFn p, Object a) {
-        if (a != null) {
-            Object ret = p.invoke(a);
-            return toBoolean(ret) && ret != null;
-        } else return false;
+        Object ret = p.invoke(a);
+        if (ret instanceof Boolean) return (Boolean) ret;
+        else return ret != null;
     }
 
     private void fillTail() {
@@ -224,6 +210,10 @@ class HAMT {
         return nodeAt(idx)[idx & 0x01f];
     }
 
+    public static HAMT fromVector(PersistentVector vec) {
+        return new HAMT(vec, vec.meta(), vec.count(), vec.shift, vec.root, vec.tail);
+    }
+
     public PersistentVector persistentVector() {
         try {
             Constructor<PersistentVector> cons =
@@ -243,10 +233,6 @@ class HAMT {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public static HAMT fromVector(PersistentVector vec) {
-        return new HAMT(vec, vec.meta(), vec.count(), vec.shift, vec.root, vec.tail);
     }
 
     public HAMT concat(PersistentVector that) {
@@ -284,7 +270,7 @@ class HAMT {
     }
 
     public HAMT map(IFn f) {
-        HAMT newVec = emptyFrom(vector);
+        HAMT newVec = empty();
         for (int i = 0; i < size; i += 32) {
             Object[] node = nodeAt(i).clone();
             mapArray(node, f);
@@ -294,7 +280,7 @@ class HAMT {
     }
 
     public HAMT take(int n) {
-        HAMT newVec = emptyFrom(vector);
+        HAMT newVec = empty();
         if (n <= 0) return newVec;
         else if (n >= size) return fromVector(vector);
         else if (n < 32) {
@@ -317,12 +303,12 @@ class HAMT {
     }
 
     public HAMT drop(int n) {
-        HAMT newVec = emptyFrom(vector);
+        HAMT newVec = empty();
         if (n <= 0) return fromVector(vector);
         else if (n >= size) return newVec;
         else if ((n & 0x01f) == 0) {
             int from = n >>> 5; // n / 32
-            int to = ((vector.count() - 1) >> 5) + 1;
+            int to = ((size - 1) >> 5) + 1;
             newVec.pushNodesMut(vector, from, to);
         } else {
             int from = (n >>> 5) << 5; // (floor n / 32) * 32
@@ -333,7 +319,7 @@ class HAMT {
     }
 
     public HAMT takeWhile(IFn p) {
-        HAMT newVec = emptyFrom(vector);
+        HAMT newVec = empty();
         boolean go = true;
         int i = 0;
         int y = 0;
@@ -379,7 +365,7 @@ class HAMT {
             y = 0;
         }
         if (amount > 0) {
-            HAMT newVec = emptyFrom(vector);
+            HAMT newVec = empty();
             if (amount < size) {
                 from -= 32;
                 int leftSize = amount & 0x01f; // amount % 32
@@ -394,12 +380,12 @@ class HAMT {
 
     public HAMT takeLastWhile(IFn p) {
         if (size == 0) return fromVector(vector);
-        else if (!invokePred(p, lookup(size - 1))) return emptyFrom(vector);
+        else if (!invokePred(p, lookup(size - 1))) return empty();
         else return drop(reverseCountWhile(p));
     }
 
     public HAMT dropLastWhile(IFn p) {
-        if (size == 0 || !invokePred(p, vector.nth(size - 1))) return fromVector(vector);
+        if (size == 0 || !invokePred(p, lookup(size - 1))) return fromVector(vector);
         else return take(reverseCountWhile(p));
     }
 }

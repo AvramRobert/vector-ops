@@ -21,10 +21,14 @@
     <orderEntry type="library" name="Leiningen: clj-stacktrace:0.2.8" level="project" />
     <orderEntry type="library" name="Leiningen: clojure-complete:0.2.4" level="project" />
     <orderEntry type="library" name="Leiningen: criterium:0.4.4" level="project" />
+    <orderEntry type="library" name="Leiningen: erajure:0.0.3" level="project" />
+    <orderEntry type="library" name="Leiningen: expectations:1.4.41" level="project" />
     <orderEntry type="library" name="Leiningen: jline:2.12" level="project" />
+    <orderEntry type="library" name="Leiningen: junit:4.8.1" level="project" />
     <orderEntry type="library" name="Leiningen: myguidingstar/clansi:1.3.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/clojure:1.8.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/test.check:0.9.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.nrepl:0.2.12" level="project" />
+    <orderEntry type="library" name="Leiningen: org.mockito/mockito-all:1.8.0" level="project" />
   </component>
 </module>
