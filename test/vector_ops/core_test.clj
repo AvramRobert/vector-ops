@@ -80,7 +80,6 @@
                            (dropv-last-while p2 v))))))
 
 (defspec slicing
-         500
          (for-all [v (gen/vector gen/int)]
                   (let [c (count v)
                         vals [(rand-int c) (rand-int c)]

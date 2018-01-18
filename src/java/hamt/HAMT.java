@@ -47,10 +47,6 @@ class HAMT {
         this.tail = newTail;
     }
 
-    private boolean isLastIn(PersistentVector vec, int i) {
-        return i >= (vec.count() - vec.tail.length);
-    }
-
     private int tailSize() {
         return ((this.size - 1) & 0x01f) + 1;
     }
@@ -100,13 +96,43 @@ class HAMT {
         newVec.trimTail();
     }
 
+    private int countWhile(IFn p) {
+        Object[] node;
+        int i = 0;
+        int y = 0;
+        boolean go = true;
+        while (go && i < size) {
+            node = nodeAt(i);
+            int nodeLength = node.length;
+            while (y < nodeLength) {
+                if (invokePred(p, node[y])) i++;
+                else {
+                    go = false;
+                    break;
+                }
+                y++;
+            }
+            y = 0;
+        }
+        return i;
+    }
+
     private int reverseCountWhile(IFn p) {
+        Object[] node;
+        int y;
         int i = size;
-        Object a;
-        while (i >= 0) {
-            a = lookup(i - 1);
-            if (invokePred(p, a)) i--;
-            else break;
+        boolean go = true;
+        while (go && i >= 0) {
+            node = nodeAt(i - 1);
+            y = node.length - 1;
+            while (y >= 0) {
+                if (invokePred(p, node[y])) i--;
+                else {
+                    go = false;
+                    break;
+                }
+                y--;
+            }
         }
         return i;
     }
@@ -187,20 +213,9 @@ class HAMT {
     private void pushNodesMut(PersistentVector vec, int from, int to) {
         Object[] node;
         for (int i = from; i < to; i++) {
-            node = vec.arrayFor(i * 32);
+            node = vec.arrayFor(i << 5); // i * 32
             pushNodeMut(node, node.length);
         }
-    }
-
-    private void appendMut(Object a) {
-        if (tail.length < 32) {
-            int length = tail.length;
-            Object[] newTail = new Object[length + 1];
-            System.arraycopy(tail, 0, newTail, 0, length);
-            newTail[length] = a;
-            this.tail = newTail;
-            this.size += 1;
-        } else pushNodeMut(new Object[]{a}, 1);
     }
 
     private Object[] nodeAt(int idx) {
@@ -260,9 +275,11 @@ class HAMT {
             fillTail();
             for (int i = 0; i < count; i += 32) {
                 node = that.arrayFor(i);
-                if (isLastIn(that, i) && canContain(node.length)) {
-                    System.arraycopy(node, 0, tail, leftSize, node.length);
-                    this.size += node.length;
+                int next = i + 32;
+                int nodeLength = node.length;
+                if (next > count && canContain(nodeLength)) {
+                    System.arraycopy(node, 0, tail, leftSize, nodeLength);
+                    this.size += nodeLength;
                 } else {
                     Object[] newTail = new Object[32];
                     rightSize = 32 - leftSize;
@@ -305,7 +322,7 @@ class HAMT {
             int partial = n & 0x01f; // n % 32
             Object[] newTail = new Object[partial];
             newVec.pushNodesMut(vector, 0, totalNodes);
-            System.arraycopy(nodeAt(totalNodes * 32), 0, newTail, 0, partial);
+            System.arraycopy(nodeAt(totalNodes << 5), 0, newTail, 0, partial); // totalNodes * 32
             newVec.pushNodeMut(newTail, partial);
         }
         return newVec;
@@ -328,63 +345,11 @@ class HAMT {
     }
 
     public HAMT takeWhile(IFn p) {
-        HAMT newVec = empty();
-        boolean go = true;
-        int i = 0;
-        int y = 0;
-        Object[] node;
-        Object a;
-        while (go && i < size) {
-            node = nodeAt(i);
-            int nodeLength = node.length;
-            while (y < nodeLength) {
-                a = node[y];
-                y++;
-                if (invokePred(p, a)) newVec.appendMut(a);
-                else {
-                    go = false;
-                    break;
-                }
-            }
-            y = 0;
-            i += 32;
-        }
-        return newVec;
+        return take(countWhile(p));
     }
 
     public HAMT dropWhile(IFn p) {
-        Object[] node;
-        int amount = 0;
-        int from = 0;
-        int y = 0;
-        boolean go = true;
-        while (go && from < size) {
-            node = nodeAt(from);
-            int nodeLength = node.length;
-            while (y < nodeLength) {
-                if (invokePred(p, node[y])) {
-                    amount++;
-                } else {
-                    go = false;
-                    break;
-                }
-                y++;
-            }
-            from += 32;
-            y = 0;
-        }
-        if (amount > 0) {
-            HAMT newVec = empty();
-            if (amount < size) {
-                from -= 32;
-                int leftSize = amount & 0x01f; // amount % 32
-                if (leftSize == 0) {
-                    int n = ((size - 1) >> 5) + 1;
-                    newVec.pushNodesMut(vector, from >> 5, n);
-                } else chunkedCopy(newVec, from, size, leftSize);
-            }
-            return newVec;
-        } else return fromVector(vector);
+        return drop(countWhile(p));
     }
 
     public HAMT takeLastWhile(IFn p) {
@@ -404,11 +369,11 @@ class HAMT {
         else if (from < 0) return slice(0, to);
         else if ((from & 0x01f) == 0) {
             if (from + 32 < to) {
-                int total = to >>> 5;
-                int partial = to & 0x01f;
-                newVec.pushNodesMut(vector, from >>> 5, total);
+                int totalNodes = to >>> 5; // to / 32
+                int partial = to & 0x01f; // to % 32
+                newVec.pushNodesMut(vector, from >>> 5, totalNodes);
                 Object[] arr = new Object[partial];
-                System.arraycopy(nodeAt(total * 32), 0, arr, 0, partial);
+                System.arraycopy(nodeAt(totalNodes << 5), 0, arr, 0, partial); // totalNodes * 32
                 newVec.pushNodeMut(arr, partial);
             } else chunkedCopy(newVec, from, to, from & 0x01f);
         } else {

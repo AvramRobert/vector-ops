@@ -79,4 +79,4 @@
   (measure (c/slicev data n m)))
 
 (defn -main [& args]
-  (bench-slice-opt))
+  (bench-take-last-while-opt))
