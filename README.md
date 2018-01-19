@@ -1,14 +1,20 @@
 # vector-ops
 
-A Clojure library designed to ... well, that part is up to you.
+Standard Clojure collection functions optimised for vectors.
 
-## Usage
+If you've ever wanted (optimised) vector versions of functions like `take`, `drop`, `concat` etc.,
+you'll most probably find them here.
+
+## Clojars
 
 FIXME
 
+## Benchmarks
+
+**NOTE:** Subvectors not yet supported.
+
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2018 Robert M. Avram
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Apache-2.0 License.
