@@ -2,19 +2,9 @@
   (require [vector-ops.core :as o]
            [clojure.string :as s]
            [criterium.core :as c])
-  (:import (java.io Writer StringWriter)))
-
-(def data (vec (range 0 1000000)))
-(def spread-data (mapv (constantly data) (range 0 10)))
-(def n 425166)
-(def m 785221)
-(def p #(< % n))
-(def p2 #(> % n))
+  (:import (java.io StringWriter)))
 
 (def data-ranges [0 10 100 1000 10000 100000 1000000])
-
-(defmacro measure [expr]
-  `(c/with-progress-reporting (c/bench ~expr :os)))
 
 (defn extract-estimate [result]
   (let [s (re-find #"[0-9]+.[0-9]+ s" result)
@@ -34,91 +24,191 @@
       (nth 2)
       (extract-estimate)))
 
-(defn run-benchmark [{:keys [name ranges expr]}]
+(defn data-from [v data-type]
+  (letfn [(max-min [a]
+            (let [x (rand-nth a)
+                  y (rand-nth a)]
+              (if (= x y) (max-min a) (sort [x y]))))]
+    (case data-type
+      :rand-val (if (empty? v) 0 (rand-nth v))
+      :range    (cond (empty? v) [0 0]
+                      (= 1 (count v)) [(first v) (first v)]
+                      :else (max-min v))
+      :multiset (->> (range 0 10) (mapv (constantly v)))
+      v)))
+
+(defn run-benchmark [{:keys [name ranges data-type expr]}]
+  (assert (not (nil? data-type)) "Please specify the additional desired
+                                  data-type to accompany the `data` in `expr`")
   (->> ranges
        (reduce
          (fn [benchmarks i]
            (let [writer (StringWriter.)
                  _ (println "Running benchmark for " name " with " i " elements.")]
              (binding [*out* writer]
-               (let [data (vec (range 0 i))
-                     val  (if (zero? i) 0 (rand-nth data))
-                     _    (c/bench (expr data val) :os)
-                     ms   (extract-duration writer)]
+               (let [vector (vec (range 0 i))
+                     input  (data-from vector data-type)
+                     _      (c/bench (expr vector input) :os)
+                     ms     (extract-duration writer)]
                  (assoc benchmarks i ms))))) {})
        (mapv #(s/join "," %))
        (s/join "\n")
-       (spit (str name "-benchmark.csv"))))
+       (spit (str "./benchmarks/" name "-benchmark.csv"))))
 
 (defn bench-concat-clj []
   (run-benchmark {:name "clj-concat"
                   :ranges data-ranges
+                  :data-type :rand-val
                   :expr (fn [data _] (into data data))}))
 
 (defn bench-concat-opt []
   (run-benchmark {:name "opt-concat"
-                  :ranges [data-ranges]
+                  :ranges data-ranges
+                  :data-type :rand-val
                   :expr (fn [data _] (o/concatv data data))}))
 
-(defn bench-concat-spread-opt []
-  (measure (apply o/concatv spread-data)))
+(defn bench-concat-many-clj []
+  (run-benchmark {:name "clj-concat-many"
+                  :ranges data-ranges
+                  :data-type :multiset
+                  :expr (fn [_ all] (apply concat all))}))
+
+(defn bench-concat-many-opt []
+  (run-benchmark {:name "opt-concat-many"
+                  :ranges data-ranges
+                  :data-type :multiset
+                  :expr (fn [_ all] (apply o/concatv all))}))
 
 (defn bench-mapv-clj []
-  (measure (mapv inc data)))
+  (run-benchmark {:name "clj-map"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (mapv #(+ % n) data))}))
 
 (defn bench-mapv-opt []
-  (measure (o/mapv inc data)))
+  (run-benchmark {:name "opt-map"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/mapv #(+ % n) data))}))
 
 (defn bench-take-clj []
-  (measure (vec (take n data))))
+  (run-benchmark {:name "clj-take"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (vec (take n data)))}))
 
 (defn bench-take-opt []
-  (measure (o/takev n data)))
+  (run-benchmark {:name "opt-take"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/takev n data))}))
 
 (defn bench-drop-clj []
-  (measure (vec (drop n data))))
+  (run-benchmark {:name "clj-drop"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (vec (drop n data)))}))
 
 (defn bench-drop-opt []
-  (measure (o/dropv n data)))
+  (run-benchmark {:name "opt-drop"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/dropv n data))}))
 
 (defn bench-split-clj []
-  (measure (mapv vec (split-at n data))))
+  (run-benchmark {:name "clj-split"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (mapv vec (split-at n data)))}))
 
 (defn bench-split-opt []
-  (measure (o/splitv-at n data)))
+  (run-benchmark {:name "opt-split"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/splitv-at n data))}))
 
 (defn bench-take-while-clj []
-  (measure (vec (take-while p data))))
+  (run-benchmark {:name "clj-take-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (vec (take-while #(< % n) data)))}))
 
 (defn bench-take-while-opt []
-  (measure (o/takev-while p data)))
+  (run-benchmark {:name "opt-take-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/takev-while #(< % n) data))}))
 
 (defn bench-drop-while-clj []
-  (measure (vec (drop-while p data))))
+  (run-benchmark {:name "clj-drop-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (vec (drop-while #(< % n) data)))}))
 
 (defn bench-drop-while-opt []
-  (measure (o/dropv-while p data)))
+  (run-benchmark {:name "opt-drop-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/dropv-while #(< % n) data))}))
 
 (defn bench-take-last-while-clj [] []
-  (measure (->> (reverse data) (take-while p2) (reverse))))
+  (run-benchmark {:name "clj-take-last-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (->> (reverse data) (take-while #(> % n)) (reverse)))}))
 
 (defn bench-take-last-while-opt [] []
-  (measure (o/takev-last-while p2 data)))
+  (run-benchmark {:name "opt-take-last-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/takev-last-while #(> % n) data))}))
 
 (defn bench-drop-last-while-clj []
-  (measure (->> (reverse data) (drop-while p2) (reverse))))
+  (run-benchmark {:name "clj-drop-last-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (->> (reverse data) (drop-while #(> % n)) (reverse)))}))
 
 (defn bench-drop-last-while-opt []
-  (measure (o/dropv-last-while p2 data)))
-
-(defn bench-subvec-clj []
-  (measure (subvec data n m)))
+  (run-benchmark {:name "opt-drop-last-while"
+                  :ranges data-ranges
+                  :data-type :rand-val
+                  :expr (fn [data n] (o/dropv-last-while #(> % n) data))}))
 
 (defn bench-slice-clj []
-  (measure (->> data (take m) (drop n) (vec))))
+  (run-benchmark {:name "clj-slice"
+                  :ranges data-ranges
+                  :data-type :range
+                  :expr (fn [data [min max]] (->> data (take max) (drop min) (vec)))}))
 
 (defn bench-slice-opt []
-  (measure (o/slicev data n m)))
+  (run-benchmark {:name "opt-slice"
+                  :ranges data-ranges
+                  :data-type :range
+                  :expr (fn [data [min max]] (o/slicev data min max))}))
 
 (defn -main [& args]
-  (bench-take-last-while-opt))
+  (case (keyword (first args))
+    :clj-concat (bench-concat-clj)
+    :opt-concat (bench-concat-opt)
+    :clj-map    (bench-mapv-clj)
+    :opt-map    (bench-mapv-opt)
+    :clj-take   (bench-take-clj)
+    :opt-take   (bench-take-opt)
+    :clj-drop   (bench-drop-clj)
+    :opt-drop   (bench-drop-opt)
+    :clj-take-while (bench-take-while-clj)
+    :opt-take-while (bench-take-while-opt)
+    :clj-drop-while (bench-drop-while-clj)
+    :opt-drop-while (bench-drop-while-opt)
+    :clj-take-last-while (bench-take-last-while-clj)
+    :opt-take-last-while (bench-take-last-while-opt)
+    :clj-drop-last-while (bench-drop-last-while-clj)
+    :opt-drop-last-while (bench-drop-last-while-opt)
+    :clj-split           (bench-split-clj)
+    :opt-split           (bench-split-opt)
+    :clj-slice           (bench-slice-clj)
+    :opt-slice           (bench-slice-opt)
+    :clj-concat-many     (bench-concat-many-clj)
+    :opt-concat-many     (bench-concat-many-opt))
+    (println "Benchmark not specified. Nothing to benchmark."))
