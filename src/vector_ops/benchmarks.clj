@@ -53,7 +53,7 @@
                  (assoc benchmarks i ms))))) {})
        (mapv #(s/join "," %))
        (s/join "\n")
-       (spit (str "./benchmarks/" name "-benchmark.csv"))))
+       (spit (str "./benchmarks/data/" name "-benchmark.csv"))))
 
 (defn bench-concat-clj []
   (run-benchmark {:name "clj-concat"
