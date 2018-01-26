@@ -1,8 +1,8 @@
 # vector-ops
 
-Standard Clojure collection functions optimised for vectors.
+Clojure collection functions optimised for vectors.
 
-If you've ever wanted (optimised) vector versions of functions like `take`, `drop`, `concat` etc.,
+If you've ever wanted optimised vector versions of functions like `take`, `drop`, `concat` etc.,
 you'll most probably find them here.
 
 ## Clojars
