@@ -72,7 +72,7 @@
   (run-benchmark {:name "clj-concat-many"
                   :ranges data-ranges
                   :data-type :multiset
-                  :expr (fn [_ all] (apply concat all))}))
+                  :expr (fn [_ all] (vec (apply concat all)))}))
 
 (defn bench-concat-many-opt []
   (run-benchmark {:name "opt-concat-many"
