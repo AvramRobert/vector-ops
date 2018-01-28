@@ -2,25 +2,30 @@
 
 cd ../
 
-lein run clj-concat
-lein run opt-concat
-lein run clj-map
-lein run opt-map
-lein run clj-take
-lein run opt-take
-lein run clj-drop
-lein run opt-drop
-lein run clj-take-while
-lein run opt-take-while
-lein run clj-drop-while
-lein run opt-drop-while
-lein run clj-take-last-while
-lein run opt-take-last-while
-lein run clj-drop-last-while
-lein run opt-drop-last-while
-lein run clj-split
-lein run opt-split
-lein run clj-slice
-lein run opt-slice
-lein run clj-concat-many
-lein run opt-concat-many
+lein run benchmark clj-concat
+lein run benchmark opt-concat
+lein run benchmark clj-map
+lein run benchmark opt-map
+lein run benchmark clj-take
+lein run benchmark opt-take
+lein run benchmark clj-drop
+lein run benchmark opt-drop
+lein run benchmark clj-take-last
+lein run benchmark opt-take-last
+lein run benchmark clj-drop-last
+lein run benchmark opt-drop-last
+lein run benchmark clj-take-while
+lein run benchmark opt-take-while
+lein run benchmark clj-drop-while
+lein run benchmark opt-drop-while
+lein run benchmark clj-take-last-while
+lein run benchmark opt-take-last-while
+lein run benchmark clj-drop-last-while
+lein run benchmark opt-drop-last-while
+lein run benchmark clj-split
+lein run benchmark opt-split
+lein run benchmark clj-slice
+lein run benchmark opt-slice
+lein run benchmark clj-concat-many
+lein run benchmark opt-concat-many
+lein run make-page
