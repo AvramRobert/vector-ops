@@ -1,22 +1,24 @@
-### Benchmarks
-  These benchmarks have been done using `criterium`. You may find the code used for these
-  in `vector_ops.benchmarks.bench`. 
+# Benchmarks
+  These benchmarks have been done using `criterium`. You may find the code in `vector_ops.benchmarks.bench`. 
 
-  As with any benchmarks, these don't project a perfect view of reality and I don't claim
-  they do as such. They solely deem as an indicator of the degree of improvement these
-  optimisations might have over the Clojure alternatives. 
+  As with any benchmarks, these don't project a perfect view of reality and I don't claim they do as such. 
+  They solely deem as an indicator of the degree of improvement these optimisations might have over the Clojure alternatives. 
 
+  
   Benchmarks have been run on: 
 
-  Operating System: Ubuntu 16.04 (64 bit) 
+  **Operating System**: Ubuntu 16.04 (64 bit) 
 
-  CPU: Intel i7-6700HQ CPU (6MB cache, 2.60 - 3.50 GHz x 4 cores) 
+  **CPU**: Intel i7-6700HQ CPU (6MB cache, 2.60 - 3.50 GHz x 4 cores) 
 
-  Memory: 16 GB DDR4 
-#### Concatenation
+  **Memory**: 16 GB DDR4 
+### Concatenation
 **Note:** -
-**Clojure:** `(vec (concat v1 v2))` 
-**Optimised:** `(vector-ops.core/concatv v1 v2)` 
+
+**Clojure:** `(vec (concat v1 v2))`
+
+**Optimised:** `(vector-ops.core/concatv v1 v2)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 345.229310 ns | 339.861051 ns |
@@ -26,10 +28,13 @@
 | 10000 | 187.033922 µs | 104.283332 µs |
 | 100000 | 1.877405 ms | 694.706478 µs |
 | 1000000 | 24.399620 ms | 8.079484 ms |
-#### Batch concatenation
-**Note:** For the optimisations, batch concatenation is faster that deliberately reducing and concating individually
-**Clojure:** `(vec (apply concat vs))` 
-**Optimised:** `(vector-ops.core/apply concatv vs)` 
+### Batch concatenation
+**Note:** Concatenated 10 vectors of given `size` at once.
+
+**Clojure:** `(vec (apply concat vs))`
+
+**Optimised:** `(vector-ops.core/apply concatv vs)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 680.699980 ns | 727.592081 ns |
@@ -39,10 +44,13 @@
 | 10000 | 3.148500 ms | 784.801012 µs |
 | 100000 | 31.899151 ms | 6.345807 ms |
 | 1000000 | 748.850652 ms | 74.269136 ms |
-#### Dropping
+### Dropping
 **Note:** -
-**Clojure:** `(vec (drop n v))` 
-**Optimised:** `(vector-ops.core/dropv n v)` 
+
+**Clojure:** `(vec (drop n v))`
+
+**Optimised:** `(vector-ops.core/dropv n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 132.223037 ns | 375.939147 ns |
@@ -52,10 +60,13 @@
 | 10000 | 275.494455 µs | 7.162063 µs |
 | 100000 | 2.777170 ms | 82.817750 µs |
 | 1000000 | 29.576256 ms | 512.021192 µs |
-#### Dropping last
+### Dropping last
 **Note:** -
-**Clojure:** `(vec (drop-last n v))` 
-**Optimised:** `(vector-ops.core/dropv-last n v)` 
+
+**Clojure:** `(vec (drop-last n v))`
+
+**Optimised:** `(vector-ops.core/dropv-last n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 175.357342 ns | 437.698358 ns |
@@ -65,10 +76,13 @@
 | 10000 | 687.124150 µs | 3.762374 µs |
 | 100000 | 6.915643 ms | 46.082897 µs |
 | 1000000 | 72.047499 ms | 550.540710 µs |
-#### Dropping last while
+### Dropping last while
 **Note:** -
-**Clojure:** `(vec (->> (reverse v) (drop-while p) (reverse)))` 
-**Optimised:** `(vector-ops.core/dropv-last-while n v)` 
+
+**Clojure:** `(vec (->> (reverse v) (drop-while p) (reverse)))`
+
+**Optimised:** `(vector-ops.core/dropv-last-while n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 66.726810 ns | 396.620673 ns |
@@ -78,10 +92,13 @@
 | 10000 | 891.292573 µs | 104.594932 µs |
 | 100000 | 8.942677 ms | 1.152626 ms |
 | 1000000 | 92.526941 ms | 11.329923 ms |
-#### Dropping while
+### Dropping while
 **Note:** -
-**Clojure:** `(vec (drop-while n v))` 
-**Optimised:** `(vector-ops.core/dropv-wihle n v)` 
+
+**Clojure:** `(vec (drop-while n v))`
+
+**Optimised:** `(vector-ops.core/dropv-wihle n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 129.750360 ns | 366.233883 ns |
@@ -91,10 +108,13 @@
 | 10000 | 330.018728 µs | 119.331512 µs |
 | 100000 | 3.320606 ms | 1.209765 ms |
 | 1000000 | 37.018909 ms | 16.450809 ms |
-#### Slicing
-**Note:** Like `clojure.core/subvec`, but returns a proper vectors, not a subvector
-**Clojure:** `(vec (->> v (take m) (drop n)))` 
-**Optimised:** `(vector-ops.core/slicev v n m)` 
+### Slicing
+**Note:** Like `clojure.core/subvec`, but returns a proper vector, not a subvector
+
+**Clojure:** `(vec (->> v (take m) (drop n)))`
+
+**Optimised:** `(vector-ops.core/slicev v n m)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 172.486548 ns | 404.239077 ns |
@@ -104,10 +124,13 @@
 | 10000 | 653.608135 µs | 7.208002 µs |
 | 100000 | 6.541279 ms | 45.204940 µs |
 | 1000000 | 66.623653 ms | 508.389323 µs |
-#### Splitting at
+### Splitting at
 **Note:** -
-**Clojure:** `(mapv vec (split-at n v))` 
-**Optimised:** `(vector-ops.core/splitv-at n v)` 
+
+**Clojure:** `(mapv vec (split-at n v))`
+
+**Optimised:** `(vector-ops.core/splitv-at n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 599.651668 ns | 761.593406 ns |
@@ -117,10 +140,13 @@
 | 10000 | 734.441009 µs | 11.063172 µs |
 | 100000 | 7.377658 ms | 128.443786 µs |
 | 1000000 | 79.965784 ms | 1.325559 ms |
-#### Taking
+### Taking
 **Note:** -
-**Clojure:** `(vec (take n v))` 
-**Optimised:** `(vector-ops.core/takev n v)` 
+
+**Clojure:** `(vec (take n v))`
+
+**Optimised:** `(vector-ops.core/takev n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 114.261699 ns | 373.606481 ns |
@@ -130,10 +156,13 @@
 | 10000 | 462.230501 µs | 3.726358 µs |
 | 100000 | 4.761912 ms | 45.531588 µs |
 | 1000000 | 46.933487 ms | 515.379634 µs |
-#### Taking last
+### Taking last
 **Note:** -
-**Clojure:** `(vec (take-last n v))` 
-**Optimised:** `(vector-ops.core/takev-last n v)` 
+
+**Clojure:** `(vec (take-last n v))`
+
+**Optimised:** `(vector-ops.core/takev-last n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 79.496262 ns | 421.222690 ns |
@@ -143,10 +172,13 @@
 | 10000 | 378.159922 µs | 7.222426 µs |
 | 100000 | 3.831265 ms | 82.996909 µs |
 | 1000000 | 41.660342 ms | 557.392265 µs |
-#### Taking last while
+### Taking last while
 **Note:** -
-**Clojure:** `(vec (->> (reverse v) (take-while p) (reverse)))` 
-**Optimised:** `(vector-ops.core/takev-last-while n v)` 
+
+**Clojure:** `(vec (->> (reverse v) (take-while p) (reverse)))`
+
+**Optimised:** `(vector-ops.core/takev-last-while n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 61.263335 ns | 373.965567 ns |
@@ -156,10 +188,13 @@
 | 10000 | 1.105790 ms | 109.597844 µs |
 | 100000 | 11.137508 ms | 1.115697 ms |
 | 1000000 | 114.252488 ms | 12.345147 ms |
-#### Taking while
+### Taking while
 **Note:** -
-**Clojure:** `(vec (take-while n v))` 
-**Optimised:** `(vector-ops.core/takev-while n v)` 
+
+**Clojure:** `(vec (take-while n v))`
+
+**Optimised:** `(vector-ops.core/takev-while n v)`
+
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
 | 0 | 123.342048 ns | 364.198699 ns |

@@ -13,10 +13,10 @@
 
 (defn entry [{:keys [title clj-code opt-code note clj-csv opt-csv]}]
   (letfn [(row [[k [clj opt]]] (str "| " k " | " clj " | " opt " |"))]
-    (str "#### " title "\n"
-         "**Note:** " (or note "-") "\n"
-         "**Clojure:** `" clj-code "` \n"
-         "**Optimised:** `" opt-code "` \n"
+    (str "### " title "\n"
+         "**Note:** " (or note "-") "\n\n"
+         "**Clojure:** `" clj-code "`\n\n"
+         "**Optimised:** `" opt-code "`\n\n"
          "| **Size** | **Clojure**   | **Optimised**   | \n"
          "| -------- | :----------------: | :------------------: | \n"
          (->> (csv->map opt-csv)
@@ -36,7 +36,7 @@
 
          :concat-many     (fn []
                             {:title    "Batch concatenation"
-                             :note     "For the optimisations, batch concatenation is faster that deliberately reducing and concating individually"
+                             :note     "Concatenated 10 vectors of given `size` at once."
                              :clj-code (clj-f "apply concat vs")
                              :opt-code (ops-f "apply concatv vs")
                              :clj-csv  (slurp (output-file "clj-concat-many"))
@@ -107,7 +107,7 @@
 
          :slice           (fn []
                             {:title    "Slicing"
-                             :note     "Like `clojure.core/subvec`, but returns a proper vectors, not a subvector"
+                             :note     "Like `clojure.core/subvec`, but returns a proper vector, not a subvector"
                              :clj-code (clj-f "->> v (take m) (drop n)")
                              :opt-code (ops-f "slicev v n m")
                              :clj-csv  (slurp (output-file "clj-slice"))
@@ -115,16 +115,15 @@
 
 (defn page []
   (str
-    "### Benchmarks
-  These benchmarks have been done using `criterium`. You may find the code used for these
-  in `vector_ops.benchmarks.bench`. \n
-  As with any benchmarks, these don't project a perfect view of reality and I don't claim
-  they do as such. They solely deem as an indicator of the degree of improvement these
-  optimisations might have over the Clojure alternatives. \n
+    "# Benchmarks
+  These benchmarks have been done using `criterium`. You may find the code in `vector_ops.benchmarks.bench`. \n
+  As with any benchmarks, these don't project a perfect view of reality and I don't claim they do as such. 
+  They solely deem as an indicator of the degree of improvement these optimisations might have over the Clojure alternatives. \n
+  
   Benchmarks have been run on: \n
-  Operating System: Ubuntu 16.04 (64 bit) \n
-  CPU: Intel i7-6700HQ CPU (6MB cache, 2.60 - 3.50 GHz x 4 cores) \n
-  Memory: 16 GB DDR4 \n"
+  **Operating System**: Ubuntu 16.04 (64 bit) \n
+  **CPU**: Intel i7-6700HQ CPU (6MB cache, 2.60 - 3.50 GHz x 4 cores) \n
+  **Memory**: 16 GB DDR4 \n"
     (->> benchmark-data
          (mapv (fn [[_ gen-data]] (entry (gen-data))))
          (s/join "\n"))))
