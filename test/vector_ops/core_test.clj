@@ -12,6 +12,9 @@
                    v2 (gen/vector gen/int)]
                   (is (= (concatv v1 v2) (into v1 v2)))))
 
+(defspec concatenation-many
+         (for-all [vs (gen/vector (gen/vector gen/int))]
+                  (is (= (apply concatv vs) (vec (apply concat vs))))))
 
 (defspec mapping
          (for-all [v (gen/vector gen/int)]

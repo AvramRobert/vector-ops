@@ -42,6 +42,13 @@
                              :clj-csv  (slurp (output-file "clj-concat-many"))
                              :opt-csv  (slurp (output-file "opt-concat-many"))})
 
+         :map             (fn []
+                            {:title    "Mapping"
+                             :clj-code "mapv f vs"
+                             :opt-code (ops-f "mapv f vs")
+                             :clj-csv  (slurp (output-file "clj-map"))
+                             :opt-csv  (slurp (output-file "opt-map"))})
+
          :take            (fn []
                             {:title    "Taking"
                              :clj-code (clj-f "take n v")

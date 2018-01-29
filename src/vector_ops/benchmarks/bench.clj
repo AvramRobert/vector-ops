@@ -131,7 +131,7 @@
 
 (defn bench-drop-opt []
   (run-benchmark {:name      "opt-drop"
-                  :ranges    data-ranges
+                  :ranges    []
                   :data-type :half-val
                   :expr      (fn [data n] (o/dropv n data))}))
 

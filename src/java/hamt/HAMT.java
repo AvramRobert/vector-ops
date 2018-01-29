@@ -24,7 +24,7 @@ class HAMT {
     }
 
     private HAMT empty() {
-        return new HAMT(vector, meta, 0, 5, nodeFrom(vector.root), new Object[]{});
+        return new HAMT(vector, meta, 0, 5, nodeFrom(PersistentVector.EMPTY.root), new Object[]{});
     }
 
     private Node nodeFrom(Node that) {
@@ -147,7 +147,7 @@ class HAMT {
     }
 
     private Node push(Node tree, Object[] that, int shift) {
-        int i = ((size - 1) >>> shift) & 0x01f;
+        int i = ((this.size - 1) >>> shift) & 0x01f;
         Node newTree = cloneNode(tree);
         if (shift == 5) {
             newTree.array[i] = new Node(tree.edit, that);
@@ -156,7 +156,7 @@ class HAMT {
             if (subtree == null) {
                 newTree.array[i] = path(new Node(tree.edit, that), shift - 5);
             } else {
-                push((Node) newTree.array[i], that, shift - 5);
+                newTree.array[i] = push(subtree, that, shift - 5);
             }
         }
         return newTree;
@@ -176,10 +176,11 @@ class HAMT {
         this.size += nodeSize;
     }
 
-    private void pushNodes(PersistentVector tht) {
+    private void pushNodes(PersistentVector that) {
         Object[] node;
-        for (int i = 0; i < tht.count(); i += 32) {
-            node = tht.arrayFor(i);
+        int size = that.count();
+        for (int i = 0; i < size; i += 32) {
+            node = that.arrayFor(i);
             pushNode(node, node.length);
         }
     }
@@ -284,9 +285,9 @@ class HAMT {
                     Object[] newTail = new Object[32];
                     rightSize = 32 - leftSize;
                     System.arraycopy(node, 0, tail, leftSize, rightSize);
+                    this.size += rightSize;
                     leftSize = node.length - rightSize;
                     System.arraycopy(node, rightSize, newTail, 0, leftSize);
-                    this.size += rightSize;
                     pushNode(newTail, leftSize);
                 }
             }
@@ -308,7 +309,7 @@ class HAMT {
     public HAMT take(int n) {
         HAMT newVec = empty();
         if (n <= 0) return newVec;
-        else if (n >= size) return fromVector(vector);
+        else if (n >= size) return this;
         else if (n < 32) {
             Object[] newTail = new Object[n];
             System.arraycopy(nodeAt(0), 0, newTail, 0, n);
@@ -353,13 +354,13 @@ class HAMT {
     }
 
     public HAMT takeLastWhile(IFn p) {
-        if (size == 0) return fromVector(vector);
+        if (size == 0) return this;
         else if (!invokePred(p, lookup(size - 1))) return empty();
         else return drop(reverseCountWhile(p));
     }
 
     public HAMT dropLastWhile(IFn p) {
-        if (size == 0 || !invokePred(p, lookup(size - 1))) return fromVector(vector);
+        if (size == 0 || !invokePred(p, lookup(size - 1))) return this;
         else return take(reverseCountWhile(p));
     }
 

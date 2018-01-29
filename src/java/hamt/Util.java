@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 public class Util {
 
-    private static Object[] insideOut(Node node, int shift) {
+    public static Object[] insideOut(Node node, int shift) {
         if (shift == 0) return node.array.clone();
         else {
             Object[] newNode = node.array.clone();
