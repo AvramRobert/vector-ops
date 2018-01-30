@@ -44,7 +44,7 @@
 
          :map             (fn []
                             {:title    "Mapping"
-                             :clj-code "mapv f vs"
+                             :clj-code "(mapv f vs)"
                              :opt-code (ops-f "mapv f vs")
                              :clj-csv  (slurp (output-file "clj-map"))
                              :opt-csv  (slurp (output-file "opt-map"))})

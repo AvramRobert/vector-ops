@@ -131,7 +131,7 @@
 
 (defn bench-drop-opt []
   (run-benchmark {:name      "opt-drop"
-                  :ranges    []
+                  :ranges    data-ranges
                   :data-type :half-val
                   :expr      (fn [data n] (o/dropv n data))}))
 
@@ -171,13 +171,13 @@
                   :data-type :half-val
                   :expr      (fn [data n] (o/dropv-while #(< % n) data))}))
 
-(defn bench-take-last-while-clj [] []
+(defn bench-take-last-while-clj []
   (run-benchmark {:name      "clj-take-last-while"
                   :ranges    data-ranges
                   :data-type :half-val
                   :expr      (fn [data n] (->> (reverse data) (take-while #(> % n)) (reverse)))}))
 
-(defn bench-take-last-while-opt [] []
+(defn bench-take-last-while-opt []
   (run-benchmark {:name      "opt-take-last-while"
                   :ranges    data-ranges
                   :data-type :half-val
