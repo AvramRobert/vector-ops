@@ -1,6 +1,6 @@
 # vector-ops
 
-Clojure collection functions optimised for vectors.
+Clojure collection operations optimised for vectors.
 
 If you've ever wanted optimised vector versions of functions like `take`, `drop`, `concat` etc.,
 you'll most probably find them here.
@@ -8,7 +8,9 @@ you'll most probably find them here.
 **NOTE:** Subvectors not yet supported
 ## Clojars
 
-FIXME
+```clj
+[vector-ops "0.1.0"]
+```
 
 ## Usage 
 ```clojure 
