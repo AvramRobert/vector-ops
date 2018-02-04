@@ -33,7 +33,7 @@
 
 **Clojure:** `(vec (apply concat vs))`
 
-**Optimised:** `(vector-ops.core/apply concatv vs)`
+**Optimised:** `(apply vector-ops.core/concatv vs)`
 
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 
@@ -97,7 +97,7 @@
 
 **Clojure:** `(vec (drop-while n v))`
 
-**Optimised:** `(vector-ops.core/dropv-wihle n v)`
+**Optimised:** `(vector-ops.core/dropv-while n v)`
 
 | **Size** | **Clojure**   | **Optimised**   | 
 | -------- | :----------------: | :------------------: | 

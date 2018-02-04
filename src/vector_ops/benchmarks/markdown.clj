@@ -38,7 +38,7 @@
                             {:title    "Batch concatenation"
                              :note     "Concatenated 10 vectors of given `size` at once."
                              :clj-code (clj-f "apply concat vs")
-                             :opt-code (ops-f "apply concatv vs")
+                             :opt-code "(apply vector-ops.core/concatv vs)"
                              :clj-csv  (slurp (output-file "clj-concat-many"))
                              :opt-csv  (slurp (output-file "opt-concat-many"))})
 
@@ -87,7 +87,7 @@
          :drop-while      (fn []
                             {:title    "Dropping while"
                              :clj-code (clj-f "drop-while n v")
-                             :opt-code (ops-f "dropv-wihle n v")
+                             :opt-code (ops-f "dropv-while n v")
                              :clj-csv  (slurp (output-file "clj-drop-while"))
                              :opt-csv  (slurp (output-file "opt-drop-while"))})
 
